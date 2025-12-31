@@ -443,14 +443,26 @@ def generate_image(client, prompt, filename, output_dir, selected_model_name):
             
         except Exception as e:
             error_msg = str(e)
+            # [상세 에러 로깅 추가]
+            print(f"=" * 50)
+            print(f"🔴 [에러 상세] {filename}")
+            print(f"   시도: {attempt}/{max_retries}")
+            print(f"   에러 타입: {type(e).__name__}")
+            print(f"   에러 메시지: {error_msg}")
+            print(f"=" * 50)
+
             # [핵심 수정] 429 (Too Many Requests) 또는 429 Resource Exhausted 에러 발생 시
             if "429" in error_msg or "ResourceExhausted" in error_msg:
                 wait_time = 30  # 30초 동안 멈췄다가 다시 시도 (분당 제한 초기화 대기)
-                print(f"🛑 [API 제한 감지] {filename} - {wait_time}초 대기 후 재시도합니다... (시도 {attempt}/{max_retries})")
+                print(f"🛑 [API 제한 감지] {filename} - {wait_time}초 대기 후 재시도합니다...")
                 time.sleep(wait_time)
+            elif "400" in error_msg or "InvalidArgument" in error_msg or "SAFETY" in error_msg.upper():
+                # 400 에러 또는 안전 필터 - 상세 로깅
+                print(f"🚫 [컨텐츠 거부] {filename} - 프롬프트가 거부됨. 5초 대기 후 재시도...")
+                time.sleep(5)
             else:
                 # 일반 에러는 5초 대기
-                print(f"⚠️ [에러] {error_msg} ({filename}) - 5초 대기")
+                print(f"⚠️ [기타 에러] {filename} - 5초 대기")
                 time.sleep(5)
             
     # [최종 실패]
