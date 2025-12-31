@@ -335,11 +335,11 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
 1. 무조건 2D 애니메이션 스타일로 그린다
 
 2. 캐릭터:
-   - 얼굴: 둥근 하얀색 원형 얼굴
+   - 얼굴: 동그란 하얀색 원형 얼굴
    - 피부: 순수한 하얀색
-   - 팔다리: 하얀색 살이 있는 부드러운 형태
+   - 몸: 슬림한 체형에 하얀색 피부
+   - 팔다리: 가늘고 부드러운 하얀색 팔다리 (일반적인 사람 비율)
    - 의상: 직업/역할에 맞는 컬러풀한 의상
-   - 성별: 머리카락 스타일, 체형, 의상으로 구분
    - 표정: 살짝 귀여운 느낌의 다양한 감정
 
 3. 배경: 2D로 디테일하게 몰입감 있게, 다양한 장소와 상황 연출
@@ -757,12 +757,12 @@ with st.sidebar:
     # ==========================================
     STYLE_PRESETS = {
         "경제학": """
-무조건 2D 애니메이션 스타일. 대사에 어울리는 둥근 하얀색 얼굴 캐릭터로 설명이 잘되는 화면 자료 느낌.
+무조건 2D 애니메이션 스타일. 대사에 어울리는 동그란 하얀색 얼굴 캐릭터로 설명이 잘되는 화면 자료 느낌.
 
 [캐릭터]
-- 얼굴: 둥근 하얀색 원형
-- 피부: 순수한 하얀색
-- 팔다리: 하얀색 살이 있는 부드러운 형태
+- 얼굴: 동그란 하얀색 원형
+- 몸: 슬림한 체형, 하얀색 피부
+- 팔다리: 가늘고 부드러운 하얀색 (일반적인 사람 비율)
 - 의상: 직업에 맞는 컬러풀한 의상
 - 표정: 살짝 귀여운 다양한 감정
 
@@ -779,15 +779,15 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 에메랄드, 보라, 주황, 핑크, 민트, 골드 등 화려한 색상
 
 [고정 스타일]
-2D animation, white round circle face, white skin, soft fleshy limbs, cute expressions, colorful costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, white round circle face, slim white body, slender white limbs with normal human proportions, cute expressions, colorful costumes, detailed 2D background, Korean keywords (2-3).
 """,
         "역사": """
-무조건 2D 애니메이션 스타일. 역사적 상황을 둥근 하얀색 얼굴 캐릭터로 설명.
+무조건 2D 애니메이션 스타일. 역사적 상황을 동그란 하얀색 얼굴 캐릭터로 설명.
 
 [캐릭터]
-- 얼굴: 둥근 하얀색 원형
-- 피부: 순수한 하얀색
-- 팔다리: 하얀색 살이 있는 부드러운 형태
+- 얼굴: 동그란 하얀색 원형
+- 몸: 슬림한 체형, 하얀색 피부
+- 팔다리: 가늘고 부드러운 하얀색 (일반적인 사람 비율)
 - 의상: 시대에 맞는 역사적 의상
 - 표정: 살짝 귀여운 다양한 감정
 
@@ -804,15 +804,15 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 왕실: 골드, 퍼플 / 전쟁: 딥 레드, 실버 / 평화: 에메랄드, 스카이블루
 
 [고정 스타일]
-2D animation, white round circle face, white skin, soft fleshy limbs, cute expressions, era-appropriate costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, white round circle face, slim white body, slender white limbs with normal human proportions, cute expressions, era-appropriate costumes, detailed 2D background, Korean keywords (2-3).
 """,
         "과학": """
-무조건 2D 애니메이션 스타일. 과학/기술 상황을 둥근 하얀색 얼굴 캐릭터로 설명.
+무조건 2D 애니메이션 스타일. 과학/기술 상황을 동그란 하얀색 얼굴 캐릭터로 설명.
 
 [캐릭터]
-- 얼굴: 둥근 하얀색 원형
-- 피부: 순수한 하얀색
-- 팔다리: 하얀색 살이 있는 부드러운 형태
+- 얼굴: 동그란 하얀색 원형
+- 몸: 슬림한 체형, 하얀색 피부
+- 팔다리: 가늘고 부드러운 하얀색 (일반적인 사람 비율)
 - 의상: 과학/기술 분야에 맞는 의상
 - 표정: 살짝 귀여운 다양한 감정
 
@@ -829,15 +829,15 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 실험실: 민트, 스카이블루 / 우주: 딥 퍼플, 네온 블루 / 디지털: 사이버 블루, 네온 핑크
 
 [고정 스타일]
-2D animation, white round circle face, white skin, soft fleshy limbs, cute expressions, science/tech costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, white round circle face, slim white body, slender white limbs with normal human proportions, cute expressions, science/tech costumes, detailed 2D background, Korean keywords (2-3).
 """,
         "커스텀 (직접 입력)": """
-무조건 2D 애니메이션 스타일. 둥근 하얀색 얼굴 캐릭터로 설명이 잘되는 화면 자료 느낌.
+무조건 2D 애니메이션 스타일. 동그란 하얀색 얼굴 캐릭터로 설명이 잘되는 화면 자료 느낌.
 
 [캐릭터]
-- 얼굴: 둥근 하얀색 원형
-- 피부: 순수한 하얀색
-- 팔다리: 하얀색 살이 있는 부드러운 형태
+- 얼굴: 동그란 하얀색 원형
+- 몸: 슬림한 체형, 하얀색 피부
+- 팔다리: 가늘고 부드러운 하얀색 (일반적인 사람 비율)
 - 의상: 직업/역할에 맞는 컬러풀한 의상
 - 표정: 살짝 귀여운 다양한 감정
 
@@ -848,7 +848,7 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 핵심 키워드 2~3개만 자연스럽게 배치
 
 [고정 스타일]
-2D animation, white round circle face, white skin, soft fleshy limbs, cute expressions, colorful costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, white round circle face, slim white body, slender white limbs with normal human proportions, cute expressions, colorful costumes, detailed 2D background, Korean keywords (2-3).
 """
     }
 
