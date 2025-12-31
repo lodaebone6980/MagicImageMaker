@@ -802,14 +802,56 @@ with st.sidebar:
 
     st.markdown("---")
 
-    st.subheader("🖌️ 화풍(Style) 지침")
-    default_style = """
+    # ==========================================
+    # [NEW] 스타일 프리셋 시스템
+    # ==========================================
+    STYLE_PRESETS = {
+        "경제학 버전": """
+[카메라 연출]
+로우앵글, 하이앵글, 미디엄숏, 버드아이뷰 등 다양한 카메라 앵글로 역동적인 장면 연출.
+
+[스틱맨 개성 - 경제/비즈니스 특화]
+하얀 원형 얼굴의 2D 스틱맨에게 상황에 맞는 의상과 소품 부여:
+- CEO/사업가: 검정 정장, 빨간 넥타이, 서류가방
+- 투자자: 파란 정장, 차트 들고 있는 모습
+- 직장인: 와이셔츠, 넥타이, 노트북
+- 자영업자: 앞치마, 계산기
+- 소비자: 캐주얼 복장, 쇼핑백
+- 은행원: 정장, 명찰
+캐릭터별로 구분되는 포인트 컬러 사용.
+
+[다채로운 색감과 조명]
+에메랄드 그린(성장/수익), 골든 앰버(부/성공), 딥 레드(하락/위기), 로열 블루(안정/신뢰), 바이올렛(혁신), 민트(희망) 등 경제 상황에 맞는 색감 활용.
+상황별 조명: 상승장은 밝고 따뜻한 조명, 하락장은 차갑고 어두운 조명, 중립은 깔끔한 화이트 조명.
+
+[글자 연출]
+핵심 키워드 2~3개만 자연스럽게 배경과 사물에 배치. 숫자, 퍼센트, 화폐 기호는 강조. 분할화면 절대 금지, 하나의 통일된 장면으로 연출.
+
+[고정 스타일]
+The style is white circle-faced stickman 2D animation with simple lines and vivid color planes. Characters wear business attire with distinct role-based costumes. Dynamic camera angles emphasize economic storytelling. No split screens.
+""",
+        "커스텀 (직접 입력)": """
 대사에 어울리는 2d 얼굴이 둥근 하얀색 스틱맨 연출로 설명과 이해가 잘되는 화면 자료 느낌으로 그려줘 상황을 잘 나타내게 분활화면으로 말고 하나의 장면으로
 너무 어지럽지 않게, 글씨는 핵심 키워드 2~3만 나오게 한다
 글씨가 너무 많지 않게 핵심만. 2D 스틱맨을 활용해 대본을 설명이 잘되게 설명하는 연출을 한다. 자막 스타일 연출은 하지 않는다.
 글씨가 나올경우 핵심 키워드 중심으로만 나오게 너무 글이 많지 않도록 한다, 글자는 배경과 서물에 자연스럽게 연출, 전체 배경 연출은 2D로 디테일하게 몰입감 있게 연출해서 그려줘 (16:9)
 다양한 장소와 상황 연출로 배경을 디테일하게 한다. 무조건 2D 스틱맨 연출
-    """
+"""
+    }
+
+    st.subheader("🖌️ 화풍(Style) 지침")
+
+    # 스타일 버전 선택 드롭박스
+    selected_style_version = st.selectbox(
+        "스타일 프리셋 선택",
+        list(STYLE_PRESETS.keys()),
+        index=0,
+        help="버전별로 최적화된 스타일을 선택하세요. '커스텀'을 선택하면 직접 수정할 수 있습니다."
+    )
+
+    # 선택된 프리셋 가져오기
+    default_style = STYLE_PRESETS[selected_style_version]
+
     style_instruction = st.text_area("AI에게 지시할 그림 스타일", value=default_style.strip(), height=150)
     st.markdown("---")
     
