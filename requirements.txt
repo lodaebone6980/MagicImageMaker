@@ -1,0 +1,10 @@
+streamlit
+audioop-lts
+requests
+Pillow
+google-genai
+pydub
+moviepy==1.0.3
+numpy<2.0.0
+decorator<5.0.0
+imageio-ffmpeg
