@@ -336,14 +336,11 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
 
 2. 캐릭터 일관성 (절대 규칙):
    - 얼굴: 반드시 하얀색(WHITE) 동그란 원형 얼굴
-   - 피부색: 반드시 순수한 하얀색(WHITE)만 사용! (살색/베이지색/피부색 절대 금지!)
-   - 몸체: 하얀색 피부의 부드러운 인체형 (1자 스틱 아님!)
+   - 피부색: 반드시 순수한 하얀색(WHITE)만! (살색/베이지색 절대 금지!)
    - 팔다리: 하얀색 살이 있는 부드러운 팔다리 (막대기 형태 금지)
-   - 의상: 직업/역할에 맞는 컬러풀한 의상을 반드시 착용
-   - 표정: 상황에 맞는 희로애락 감정 표현 (기쁨, 슬픔, 분노, 걱정, 놀람 등)
-   - 나이 표현: 노인은 주름진 얼굴, 백발, 굽은 허리 / 청년은 활기찬 자세 / 어린이는 작은 체구
-   - 성별 표현: 머리카락 스타일, 체형, 의상으로 명확히 구분
-   - 직업 표현: 직업별 특징적인 유니폼, 소품, 액세서리 필수 착용
+   - 의상: 직업/역할에 맞는 컬러풀한 의상 착용
+   - 성별: 머리카락 스타일, 체형, 의상으로 구분
+   - 표정: 다양한 감정 표현 (과하지 않고 살짝 귀여운 느낌으로)
 
 3. 색감: 에메랄드, 보라, 주황, 핑크, 골드 등 다채로운 색상 적극 활용
 4. 배경: 대본 내용에 맞는 상황과 장소를 사실적인 애니메이션 스타일로 연출
@@ -766,12 +763,10 @@ with st.sidebar:
 [캐릭터 스타일 - 절대 규칙]
 - 얼굴: 하얀색(WHITE) 동그란 원형 (필수)
 - 피부색: 반드시 순수한 하얀색(WHITE)만! (살색/베이지색 절대 금지!)
-- 몸체: 하얀색 피부의 부드러운 인체형 (1자 스틱 아님!)
 - 팔다리: 하얀색 살이 있는 부드러운 팔다리 (막대기 형태 금지)
-- 의상: 직업/역할에 맞는 컬러풀한 의상 필수 착용
-- 표정: 상황에 맞는 감정 표현 (기쁨, 슬픔, 분노, 걱정 등)
-- 나이 표현: 노인은 주름, 백발, 굽은 허리 / 청년은 활기찬 자세
-- 성별 표현: 머리카락 스타일, 체형, 의상으로 명확히 구분
+- 의상: 직업/역할에 맞는 컬러풀한 의상 착용
+- 성별: 머리카락 스타일, 체형, 의상으로 구분
+- 표정: 다양한 감정 표현 (과하지 않고 살짝 귀여운 느낌으로)
 
 [경제/비즈니스 의상 가이드]
 - CEO/사업가: 네이비 정장, 빨간 넥타이, 금색 커프스
@@ -797,7 +792,7 @@ with st.sidebar:
 - 에메랄드, 보라, 주황, 핑크, 민트, 골드 등 화려한 색상 적극 활용
 
 [고정 스타일]
-2D animation with pure WHITE circle face and pure WHITE skin body (NO flesh/beige color!) with soft fleshy arms and legs. Characters show emotions through facial expressions. Age shown by wrinkles/posture. Job-specific colorful costumes required. Realistic anime background. Korean keywords (2-3). No split screens.
+2D animation with pure WHITE circle face and pure WHITE skin body (NO flesh/beige color!) with soft fleshy arms and legs. Varied cute expressions (not exaggerated). Job-specific colorful costumes. Realistic anime background. Korean keywords (2-3). No split screens.
 """,
         "역사": """
 [카메라 연출]
@@ -806,12 +801,10 @@ with st.sidebar:
 [캐릭터 스타일 - 절대 규칙]
 - 얼굴: 하얀색(WHITE) 동그란 원형 (필수)
 - 피부색: 반드시 순수한 하얀색(WHITE)만! (살색/베이지색 절대 금지!)
-- 몸체: 하얀색 피부의 부드러운 인체형 (1자 스틱 아님!)
 - 팔다리: 하얀색 살이 있는 부드러운 팔다리 (막대기 형태 금지)
-- 의상: 시대에 맞는 역사적 의상을 반드시 착용
-- 표정: 상황에 맞는 감정 표현 (기쁨, 슬픔, 분노, 두려움 등)
-- 나이 표현: 노인은 주름, 백발, 굽은 허리 / 청년은 활기찬 자세
-- 성별 표현: 머리카락(상투, 갓, 긴머리), 체형, 의상으로 구분
+- 의상: 시대에 맞는 역사적 의상 착용
+- 성별: 머리카락(상투, 갓, 긴머리), 체형, 의상으로 구분
+- 표정: 다양한 감정 표현 (과하지 않고 살짝 귀여운 느낌으로)
 
 [역사/시대별 의상 가이드]
 - 조선시대: 한복, 갓, 도포, 저고리
@@ -836,7 +829,7 @@ with st.sidebar:
 - 평화/번영: 에메랄드, 스카이블루
 
 [고정 스타일]
-2D animation with pure WHITE circle face and pure WHITE skin body (NO flesh/beige color!) with soft fleshy arms and legs. Characters show emotions through expressions. Age shown by wrinkles/posture. Era-appropriate historical costumes required. Realistic anime background. Korean keywords (2-3). No split screens.
+2D animation with pure WHITE circle face and pure WHITE skin body (NO flesh/beige color!) with soft fleshy arms and legs. Varied cute expressions (not exaggerated). Era-appropriate historical costumes. Realistic anime background. Korean keywords (2-3). No split screens.
 """,
         "과학": """
 [카메라 연출]
@@ -845,12 +838,10 @@ with st.sidebar:
 [캐릭터 스타일 - 절대 규칙]
 - 얼굴: 하얀색(WHITE) 동그란 원형 (필수)
 - 피부색: 반드시 순수한 하얀색(WHITE)만! (살색/베이지색 절대 금지!)
-- 몸체: 하얀색 피부의 부드러운 인체형 (1자 스틱 아님!)
 - 팔다리: 하얀색 살이 있는 부드러운 팔다리 (막대기 형태 금지)
-- 의상: 과학/기술 분야에 맞는 의상을 반드시 착용
-- 표정: 상황에 맞는 감정 표현 (호기심, 놀람, 집중, 기쁨 등)
-- 나이 표현: 노인 과학자는 주름, 백발, 안경 / 젊은 연구원은 활기찬 자세
-- 성별 표현: 머리카락, 체형, 의상으로 명확히 구분
+- 의상: 과학/기술 분야에 맞는 의상 착용
+- 성별: 머리카락, 체형, 의상으로 구분
+- 표정: 다양한 감정 표현 (과하지 않고 살짝 귀여운 느낌으로)
 
 [과학/기술 의상 가이드]
 - 과학자: 흰 가운, 보안경, 실험도구
@@ -874,17 +865,16 @@ with st.sidebar:
 - 기술/디지털: 사이버 블루, 네온 핑크
 
 [고정 스타일]
-2D animation with pure WHITE circle face and pure WHITE skin body (NO flesh/beige color!) with soft fleshy arms and legs. Characters show emotions through expressions. Age shown by wrinkles/posture. Science/tech costumes required. Realistic anime background. Korean keywords (2-3). No split screens.
+2D animation with pure WHITE circle face and pure WHITE skin body (NO flesh/beige color!) with soft fleshy arms and legs. Varied cute expressions (not exaggerated). Science/tech costumes. Realistic anime background. Korean keywords (2-3). No split screens.
 """,
         "커스텀 (직접 입력)": """
 [캐릭터 기본 규칙]
 - 얼굴: 하얀색(WHITE) 동그란 원형
 - 피부색: 반드시 순수한 하얀색(WHITE)만! (살색/베이지색 절대 금지!)
-- 몸체: 하얀색 피부의 부드러운 인체형 (스틱 아님)
-- 팔다리: 하얀색 살이 있는 부드러운 형태
+- 팔다리: 하얀색 살이 있는 부드러운 팔다리 (막대기 형태 금지)
 - 의상: 직업/역할에 맞는 컬러풀한 의상 착용
-- 표정: 상황에 맞는 감정 표현
-- 나이/성별: 주름, 머리카락, 체형, 의상으로 구분
+- 성별: 머리카락, 체형, 의상으로 구분
+- 표정: 다양한 감정 표현 (과하지 않고 살짝 귀여운 느낌으로)
 
 [배경]
 - 사실적인 애니메이션 스타일
@@ -892,7 +882,7 @@ with st.sidebar:
 - 핵심 키워드 2~3개 한국어로 표시
 
 [고정 스타일]
-2D animation with pure WHITE circle face and pure WHITE skin body (NO flesh/beige color!) with soft fleshy limbs. Characters show emotions. Age/gender shown by wrinkles/hair/costume. Colorful job-specific costumes. Realistic anime background. Korean keywords displayed. No split screens.
+2D animation with pure WHITE circle face and pure WHITE skin body (NO flesh/beige color!) with soft fleshy limbs. Varied cute expressions (not exaggerated). Colorful job-specific costumes. Realistic anime background. Korean keywords displayed. No split screens.
 """
     }
 
