@@ -297,109 +297,72 @@ def make_filename(scene_num, text_chunk):
     return filename
 
 # ==========================================
-# [최종 수정됨] 함수: 프롬프트 생성 (사용자 원본 유지 + 언어 선택 기능)
+# [수정됨] 함수: 프롬프트 생성 (컨셉 기반 통합 버전)
 # ==========================================
-def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, genre_mode="info", target_language="Korean"):
+def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, target_language="Korean"):
     scene_num = index + 1
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TEXT_MODEL_NAME}:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
 
     # [언어 설정 로직] 선택된 언어에 따라 지침 자동 변경
     if target_language == "Korean":
-        lang_guide = "화면 속 글씨는 **무조건 '한글(Korean)'로 표기**하십시오. (다른 언어 절대 금지)"
+        lang_guide = "화면 속 글씨는 무조건 한글(Korean)로 표기하십시오. (다른 언어 절대 금지)"
         lang_example = "(예: 'New York' -> '뉴욕', 'Tokyo' -> '도쿄')"
     elif target_language == "English":
-        lang_guide = "화면 속 글씨는 **무조건 '영어(English)'로 표기**하십시오."
+        lang_guide = "화면 속 글씨는 무조건 영어(English)로 표기하십시오."
         lang_example = "(예: '서울' -> 'Seoul', '독도' -> 'Dokdo')"
     elif target_language == "Japanese":
-        lang_guide = "화면 속 글씨는 **무조건 '일본어(Japanese)'로 표기**하십시오."
+        lang_guide = "화면 속 글씨는 무조건 일본어(Japanese)로 표기하십시오."
         lang_example = "(예: '서울' -> 'ソウル', 'New York' -> 'ニューヨーク')"
     else:
-        lang_guide = f"화면 속 글씨는 **무조건 '{target_language}'로 표기**하십시오."
+        lang_guide = f"화면 속 글씨는 무조건 '{target_language}'로 표기하십시오."
         lang_example = ""
 
-    # ---------------------------------------------------------
-    # [모드 1] 밝은 정보/이슈 (사용자 원본 유지)
-    # ---------------------------------------------------------
-    if genre_mode == "info":
-        full_instruction = f"""
-    [역할]
-    당신은 복잡한 상황을 아주 쉽고 직관적인 그림으로 표현하는 '비주얼 커뮤니케이션 전문가'이자 '교육용 일러스트레이터'입니다.
+    full_instruction = f"""
+[역할]
+당신은 '2D 스틱맨 애니메이션 전문 프롬프트 디렉터'입니다.
 
-    [전체 영상 주제]
-    "{video_title}"
+[전체 영상 주제]
+"{video_title}"
 
-    [그림 스타일 가이드 - 절대 준수]
-    {style_instruction}
-    
-    [필수 연출 지침]
-    1. **조명(Lighting):** 무조건 **'밝고 화사한 조명(High Key Lighting)'**을 사용하십시오. 그림자가 짙거나 어두운 부분은 없어야 합니다.
-    2. **색감(Colors):** 채도가 높고 선명한 색상을 사용하여 시인성을 높이십시오. (칙칙하거나 회색조 톤 금지)
-    3. **구성(Composition):** 시청자가 상황을 한눈에 이해할 수 있도록 피사체를 화면 중앙에 명확하게 배치하십시오.
-    4. **분위기(Mood):** 교육적이고, 중립적이며, 산뜻한 분위기여야 합니다. **(절대 우울하거나, 무섭거나, 기괴한 느낌 금지)**
-    5. 분활화면으로 연출하지 말고 하나의 화면으로 연출한다.
-    6. **[텍스트 언어]:** {lang_guide} {lang_example}
-    - **[절대 금지]:** 화면의 네 모서리(Corners)나 가장자리(Edges)에 글자를 배치하지 마십시오. 글자는 반드시 중앙 피사체 주변에만 연출하십시오.
-    7. 캐릭터의 감정도 느껴진다.
+[스타일 가이드 - 최우선 준수]
+{style_instruction}
 
-    [임무]
-    제공된 대본 조각(Script Segment)을 바탕으로, 이미지 생성 AI가 그릴 수 있는 **구체적인 묘사 프롬프트**를 작성하십시오.
-    
-    [작성 요구사항]
-    - **분량:** 최소 5문장 이상으로 상세하게 묘사.
-    - **포함 요소:**
-        - **캐릭터 행동:** 대본의 상황을 연기하는 캐릭터의 구체적인 동작.
-        - **배경:** 상황을 설명하는 소품이나 장소 (배경은 깔끔하게).
-        - **시각적 은유:** 추상적인 내용일 경우, 이를 설명할 수 있는 시각적 아이디어 (예: 돈이 날아가는 모습, 그래프가 하락하는 모습 등).
-    
-    [출력 형식]
-    - **무조건 한국어(한글)**로만 작성하십시오.
-    - 부가적인 설명 없이 **오직 프롬프트 텍스트만** 출력하십시오.
-        """
+[프롬프트 작성 공식]
+[카메라 연출(앵글)] + [스틱맨 개성(직업별 의상/컬러) + 구체적 행동] + [장소/시간을 분위기로 녹여냄 + 다채로운 조명] + [글자 없는 배경 강제] + [고정 문장]
 
-    # ---------------------------------------------------------
-    # [모드 2] 역사/다큐 (사용자 원본 유지 + 언어 변수 적용)
-    # ---------------------------------------------------------
-    else: # genre_mode == "history"
-        full_instruction = f"""
-    [역할]
-    당신은 **세계사의 결정적인 순간들(한국사, 서양사, 동양사 등)**을 한국 시청자에게 전달하는 '시대극 애니메이션 감독'입니다.
+[필수 연출 지침]
+1. 카메라 앵글: 로우앵글, 하이앵글, 미디엄숏, 버드아이뷰 등 다양하게 활용
+2. 스틱맨 캐릭터:
+   - 얼굴은 반드시 하얀색 동그란 원형
+   - 몸체는 반드시 컬러풀한 의상을 입고 있어야 함 (하얀 몸체만 금지!)
+   - 성별/나이에 따라 머리카락 스타일 다르게 (짧은머리, 긴머리, 백발 등)
+   - 직업/역할에 맞는 의상과 소품 필수
+3. 색감: 에메랄드, 보라, 주황, 핑크, 골드 등 다채로운 색상 적극 활용
+4. 배경: 대본 내용에 맞는 분위기로 조명과 배경 자동 조정
+5. 글자 없는 배경: 배경의 모든 간판과 벽면은 글자 없는 추상적 기하학 패턴
+6. 분할화면 절대 금지, 하나의 통일된 장면으로 연출
+7. 텍스트 언어: {lang_guide} {lang_example}
+8. 화면 모서리/가장자리에 글자 배치 금지
 
-    [전체 영상 주제] "{video_title}"
-    [그림 스타일 가이드 - 유저 지정 (최우선 준수)] {style_instruction}
-    
-    [필수 연출 지침]
-    1. **[매우 중요] 매체(Medium):** 무조건 **평면적인 '2D 일러스트레이션'** 또는 **'셀 애니메이션'** 스타일로 표현하십시오. (3D, 실사, 모델링 느낌 절대 금지)
-    2. **[매우 중요] 텍스트 현지화(Localization):** 배경이 서양, 중국, 일본 등 어디든 상관없이, {lang_guide}
-        - **금지:** 지정된 언어 외의 문자 사용을 절대 금지합니다.
-        - **예시:** {lang_example}
-    3. **[속도/검열 해결] 수위 조절 및 은유(Metaphor):** 전쟁, 고문, 전염병 등 잔인한 묘사는 AI 검열로 인해 차단될 수 있습니다. **직접적인 묘사 대신 '시각적 은유'를 사용하십시오.**
-        - 예) 단두대 처형/전쟁 -> '떨어진 붉은 장미', '붉게 물든 깃발', '부러진 칼'
-        - 예) 전염병/죽음 -> '검은 까마귀 떼', '시들어버린 나무', '꺼진 촛불', '텅 빈 거리'
-    4. **[핵심] 다양한 장소와 시대 연출(Diverse Locations):** 대본에 나오는 **특정 시대와 장소의 특징(건축 양식, 의상, 자연환경)을 정확히 포착**하여 그리십시오.
-        - 예: 중세 유럽의 성, 산업혁명 당시의 런던 공장, 고대 로마의 원형 극장, 2차 대전의 참호, 조선의 궁궐 등 **배경을 다양하고 디테일하게 연출**하십시오.
-    5. **캐릭터 연기(Character Acting):** 2D 스틱맨 캐릭터지만, 시대에 맞는 의상(투구, 정장, 군복, 한복 등)을 입히고 **희로애락의 감정을 몸짓으로 강렬하게 연출**하십시오.
-    6. **조명(Lighting):** 2D 작화 내에서 극적인 분위기를 만드는 **'시네마틱 조명'**을 사용하십시오. (시대극 특유의 무겁고 웅장한 톤)
-    7. **색감(Colors):** **깊이 있고 진한 색조(Rich & Deep Tones)**를 사용하여 가볍지 않은, 묵직한 역사 다큐멘터리의 톤앤매너를 유지하십시오.
-    8. **구성(Composition):** 시청자가 상황을 한눈에 이해할 수 있도록 핵심 피사체를 화면 중앙에 배치하십시오. 분활화면(Split screen)은 금지입니다.
-    - **[절대 금지]:** 텍스트가 화면의 네 모서리(Corners)나 가장자리에 배치되는 것을 절대 금지합니다. (자막 공간 확보)
+[임무]
+제공된 대본 조각을 바탕으로, 이미지 생성 AI가 그릴 수 있는 구체적인 묘사 프롬프트를 작성하십시오.
 
-    [임무]
-    제공된 대본 조각(Script Segment)을 바탕으로, 이미지 생성 AI가 그릴 수 있는 **구체적인 묘사 프롬프트**를 작성하십시오.
-    
-    [작성 요구사항]
-    - **분량:** 최소 5문장 이상으로 상세하게 묘사.
-    - **포함 요소:**
-        - **텍스트 지시:** (중요) 이미지에 들어갈 텍스트를 반드시 **'{target_language}'**로 명시하십시오.
-        - **안전한 묘사:** 잔인한 장면은 은유적으로 표현하여 필터링을 피하십시오.
-        - **시대적 배경:** 대본의 시대(고대/중세/근대)와 장소(동양/서양)를 명확히 반영한 배경 묘사.
-        - **캐릭터 연기:** 상황에 따른 캐릭터의 표정과 동작.
-    
-    [출력 형식]
-    - **무조건 한국어(한글)**로만 작성하십시오.
-    - 부가적인 설명 없이 **오직 프롬프트 텍스트만** 출력하십시오.
-    """
-    
+[작성 요구사항]
+- 분량: 최소 5문장 이상으로 상세하게 묘사
+- 포함 요소:
+  - 카메라 앵글 지정
+  - 캐릭터의 의상, 머리카락, 소품 구체적 묘사
+  - 캐릭터의 행동과 감정 표현
+  - 배경과 조명 분위기
+  - 시각적 은유 (추상적 내용일 경우)
+
+[출력 형식]
+- 순수 텍스트만 출력 (마크다운 강조 **금지**)
+- 무조건 한국어로만 작성
+- 부가 설명 없이 오직 프롬프트 텍스트만 출력
+"""
+
     # 공통 실행 로직
     payload = {
         "contents": [{"parts": [{"text": f"지시사항(Instruction):\n{full_instruction}\n\n대본 내용(Script Segment):\n\"{text_chunk}\"\n\n이미지 프롬프트 결과:"}]}]
@@ -773,23 +736,6 @@ with st.sidebar:
     st.info("대본을 번호(1. 2. 3.)로 분할해서 입력하세요. 각 번호가 하나의 씬이 됩니다.") 
     
     st.markdown("---")
-    
-    # [NEW] 장르 선택 기능 (프롬프트 분기용)
-    st.subheader("🎨 영상 장르(Mood) 설정")
-    genre_select = st.radio(
-        "콘텐츠 성격 선택:",
-        ("밝은 정보/이슈 (Bright & Flat)", "역사/다큐 (Cinematic & Immersive)"),
-        index=0,
-        help="역사/다큐 선택 시 조명이 더 드라마틱해지고 배경 묘사가 깊어집니다."
-    )
-    
-    # 선택된 값 변수에 저장 (메인 로직에서 사용)
-    if "밝은" in genre_select:
-        SELECTED_GENRE_MODE = "info"
-    else:
-        SELECTED_GENRE_MODE = "history"
-
-    st.markdown("---")
 
     # [NEW] 이미지 내 텍스트 언어 선택
     st.subheader("🌐 이미지 텍스트 언어")
@@ -803,68 +749,127 @@ with st.sidebar:
     st.markdown("---")
 
     # ==========================================
-    # [NEW] 스타일 프리셋 시스템
+    # [NEW] 컨셉별 스타일 프리셋 시스템
     # ==========================================
     STYLE_PRESETS = {
-        "경제학 버전": """
+        "경제학": """
 [카메라 연출]
 로우앵글, 하이앵글, 미디엄숏, 버드아이뷰 등 다양한 카메라 앵글로 역동적인 장면 연출.
 
-[스틱맨 의상 - 절대 규칙]
-⚠️ 스틱맨은 절대 하얀 몸체만 있으면 안 됨! 무조건 의상을 입고 있어야 함!
-- 얼굴만 하얀 원형, 몸체는 반드시 컬러풀한 옷으로 덮여 있어야 함
-- 직업/역할/성별/상황에 맞는 의상 필수
+[스틱맨 캐릭터 - 절대 규칙]
+- 얼굴: 하얀색 동그란 원형 (필수 유지)
+- 몸체: 반드시 의상을 입고 있어야 함 (하얀 몸체만 있으면 안 됨!)
+- 개성: 성별, 나이에 따라 머리카락 스타일 다르게 표현 가능 (짧은머리, 긴머리, 백발 등)
+- 직업/역할/상황에 맞는 컬러풀한 의상 필수
 
-[직업별 의상 가이드]
-- CEO/사업가: 네이비 정장, 빨간 넥타이, 금색 커프스, 고급 서류가방
-- 투자자/트레이더: 스트라이프 셔츠, 조끼, 여러 모니터 앞
-- 직장인(남): 하늘색 와이셔츠, 회색 바지, 노트북 가방
+[경제/비즈니스 의상 가이드]
+- CEO/사업가: 네이비 정장, 빨간 넥타이, 금색 커프스
+- 투자자/트레이더: 스트라이프 셔츠, 조끼
+- 직장인(남): 하늘색 와이셔츠, 회색 바지
 - 직장인(여): 블라우스, 펜슬스커트, 힐
-- 자영업자: 컬러풀한 앞치마(주황/초록/보라), 모자
-- 은행원: 정장+명찰, 창구 배경
-- 공장 노동자: 작업복(파랑/주황), 안전모, 장갑
-- 배달원: 형광 조끼, 헬멧, 박스
-- 주부/소비자: 캐주얼 원피스, 쇼핑백, 장바구니
-- 학생: 교복 또는 후드티, 책가방
-- 노인: 조끼, 지팡이, 모자
+- 자영업자: 컬러풀한 앞치마(주황/초록/보라)
+- 공장 노동자: 작업복(파랑/주황), 안전모
+- 주부/소비자: 캐주얼 원피스, 쇼핑백
+- 학생: 교복 또는 후드티
+- 노인: 조끼, 지팡이, 백발
 
-[다채로운 색감 팔레트]
-배경과 의상에 다양한 색상 적극 활용:
-- 레드 계열: 크림슨, 코랄, 버건디 (위기/열정)
-- 블루 계열: 네이비, 스카이블루, 틸 (신뢰/안정)
-- 그린 계열: 에메랄드, 민트, 올리브 (성장/돈)
-- 옐로우/골드: 머스타드, 골든, 레몬 (부/성공)
-- 퍼플 계열: 바이올렛, 라벤더, 마젠타 (혁신/고급)
-- 오렌지/핑크: 피치, 살몬, 탠저린 (활력/친근)
+[다채로운 색감]
+- 에메랄드, 보라, 주황, 핑크, 민트, 골드 등 화려한 색상 적극 활용
+- 상승/긍정: 골든 앰버, 에메랄드 그린
+- 하락/위기: 딥 레드, 차가운 블루
+- 신뢰/안정: 로열 블루, 틸
 
-[조명과 분위기]
-상승장/긍정: 따뜻한 골든 라이트, 밝은 배경
-하락장/위기: 차가운 블루/그레이 톤, 어두운 그림자
-중립/설명: 깔끔한 화이트 조명, 선명한 색상
-
-[글자 연출]
-핵심 키워드 2~3개만 배경에 자연스럽게. 분할화면 절대 금지.
+[배경 연출]
+- 대본 내용에 맞는 분위기로 조명과 배경 자동 조정
+- 배경의 모든 간판과 벽면은 글자 없는 추상적 기하학 패턴으로 처리
+- 분할화면 절대 금지, 하나의 통일된 장면
 
 [고정 스타일]
-White circle-faced stickman 2D animation. Bodies MUST be clothed with colorful role-appropriate attire - NEVER plain white bodies. Use vibrant color palette for clothes and backgrounds. Dynamic camera angles. No split screens.
+The style is 2D stickman animation with white circle face. Characters MUST wear colorful role-appropriate costumes with distinct hairstyles by gender/age. All background signs and walls are abstract geometric patterns without text. Vivid colors, dynamic camera angles, no split screens.
+""",
+        "역사": """
+[카메라 연출]
+로우앵글, 하이앵글, 미디엄숏, 버드아이뷰 등 다양한 카메라 앵글로 역동적인 장면 연출.
+
+[스틱맨 캐릭터 - 절대 규칙]
+- 얼굴: 하얀색 동그란 원형 (필수 유지)
+- 몸체: 반드시 시대에 맞는 의상을 입고 있어야 함!
+- 개성: 성별, 나이에 따라 머리카락 스타일 다르게 표현 (상투, 갓, 긴머리, 백발 등)
+
+[역사/시대별 의상 가이드]
+- 조선시대: 한복, 갓, 도포, 저고리
+- 고대 로마/그리스: 토가, 투구, 갑옷
+- 중세 유럽: 갑옷, 왕관, 드레스, 망토
+- 근대: 군복, 정장, 한복
+- 왕/귀족: 화려한 금색 장식, 왕관
+- 농민/평민: 소박한 색상의 작업복
+- 군인/장수: 갑옷, 투구, 무기
+
+[다채로운 색감]
+- 왕실/귀족: 골드, 퍼플, 크림슨
+- 전쟁/긴장: 딥 레드, 블랙, 실버
+- 평화/번영: 에메랄드, 스카이블루
+- 고난/시련: 그레이, 브라운
+
+[배경 연출]
+- 대본의 시대와 장소에 맞는 분위기로 조명과 배경 자동 조정
+- 배경의 모든 간판과 벽면은 글자 없는 추상적 기하학 패턴으로 처리
+- 분할화면 절대 금지, 하나의 통일된 장면
+
+[고정 스타일]
+The style is 2D stickman animation with white circle face. Characters MUST wear era-appropriate historical costumes with distinct hairstyles by gender/age. All background signs and walls are abstract geometric patterns without text. Vivid colors, dynamic camera angles, no split screens.
+""",
+        "과학": """
+[카메라 연출]
+로우앵글, 하이앵글, 미디엄숏, 버드아이뷰 등 다양한 카메라 앵글로 역동적인 장면 연출.
+
+[스틱맨 캐릭터 - 절대 규칙]
+- 얼굴: 하얀색 동그란 원형 (필수 유지)
+- 몸체: 반드시 의상을 입고 있어야 함!
+- 개성: 성별, 나이에 따라 머리카락 스타일 다르게 표현 가능
+
+[과학/기술 의상 가이드]
+- 과학자: 흰 가운, 보안경, 실험도구
+- 의사: 수술복, 청진기, 마스크
+- 우주비행사: 우주복, 헬멧
+- 엔지니어: 작업복, 안전모, 도구벨트
+- 프로그래머: 캐주얼 후드티, 노트북
+- 교수/연구원: 정장, 안경, 책
+- 로봇/AI: 메탈릭 바디, 네온 라인
+
+[다채로운 색감]
+- 실험실: 민트, 화이트, 스카이블루
+- 우주/SF: 딥 퍼플, 네온 블루, 실버
+- 자연/생물: 에메랄드, 라임, 오렌지
+- 기술/디지털: 사이버 블루, 네온 핑크, 일렉트릭 그린
+
+[배경 연출]
+- 대본 내용에 맞는 과학적 분위기로 조명과 배경 자동 조정
+- 배경의 모든 간판과 벽면은 글자 없는 추상적 기하학 패턴으로 처리
+- 분할화면 절대 금지, 하나의 통일된 장면
+
+[고정 스타일]
+The style is 2D stickman animation with white circle face. Characters MUST wear science/tech-appropriate costumes with distinct hairstyles by gender/age. All background signs and walls are abstract geometric patterns without text. Vivid colors, dynamic camera angles, no split screens.
 """,
         "커스텀 (직접 입력)": """
-대사에 어울리는 2d 얼굴이 둥근 하얀색 스틱맨 연출로 설명과 이해가 잘되는 화면 자료 느낌으로 그려줘 상황을 잘 나타내게 분활화면으로 말고 하나의 장면으로
-너무 어지럽지 않게, 글씨는 핵심 키워드 2~3만 나오게 한다
-글씨가 너무 많지 않게 핵심만. 2D 스틱맨을 활용해 대본을 설명이 잘되게 설명하는 연출을 한다. 자막 스타일 연출은 하지 않는다.
-글씨가 나올경우 핵심 키워드 중심으로만 나오게 너무 글이 많지 않도록 한다, 글자는 배경과 서물에 자연스럽게 연출, 전체 배경 연출은 2D로 디테일하게 몰입감 있게 연출해서 그려줘 (16:9)
-다양한 장소와 상황 연출로 배경을 디테일하게 한다. 무조건 2D 스틱맨 연출
+[스틱맨 기본 규칙]
+- 얼굴: 하얀색 동그란 원형
+- 몸체: 반드시 의상 착용
+- 개성: 성별/나이에 따라 머리카락 표현 가능
+
+[고정 스타일]
+The style is 2D stickman animation with white circle face. Characters wear colorful costumes. All background signs are abstract patterns without text. No split screens.
 """
     }
 
-    st.subheader("🖌️ 화풍(Style) 지침")
+    st.subheader("🎨 컨셉 선택")
 
-    # 스타일 버전 선택 드롭박스
+    # 컨셉 선택 드롭박스
     selected_style_version = st.selectbox(
-        "스타일 프리셋 선택",
+        "컨셉 프리셋",
         list(STYLE_PRESETS.keys()),
         index=0,
-        help="버전별로 최적화된 스타일을 선택하세요. '커스텀'을 선택하면 직접 수정할 수 있습니다."
+        help="컨셉별로 최적화된 스타일이 적용됩니다."
     )
 
     # 선택된 프리셋 가져오기
@@ -1338,22 +1343,20 @@ if start_btn:
             current_video_title = "전반적인 대본 분위기에 어울리는 배경 (Context based on the script)"
 
         # 2. 프롬프트 생성 (병렬)
-        status_box.write(f"📝 프롬프트 작성 중 ({GEMINI_TEXT_MODEL_NAME}) - 모드: {SELECTED_GENRE_MODE}...") # (선택) 로그 메시지에 모드 표시 추가
+        status_box.write(f"📝 프롬프트 작성 중 ({GEMINI_TEXT_MODEL_NAME})...")
         prompts = []
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = []
-            
+
             for i, chunk in enumerate(chunks):
-                # [수정] target_language 추가 전달
                 futures.append(executor.submit(
-                    generate_prompt, 
-                    api_key, 
-                    i, 
-                    chunk, 
-                    style_instruction, 
-                    current_video_title, 
-                    SELECTED_GENRE_MODE,
-                    target_language  # <--- [NEW] 추가됨
+                    generate_prompt,
+                    api_key,
+                    i,
+                    chunk,
+                    style_instruction,
+                    current_video_title,
+                    target_language
                 ))
             
             for i, future in enumerate(as_completed(futures)):
@@ -1571,13 +1574,12 @@ if st.session_state['generated_results']:
                         with st.spinner(f"Scene {item['scene']} 다시 그리는 중..."):
                             client = genai.Client(api_key=api_key)
                             
-                            # 1. 프롬프트 다시 생성 (현재 대본과 스타일, 모드 반영)
+                            # 1. 프롬프트 다시 생성 (현재 대본과 스타일 반영)
                             current_title = st.session_state.get('video_title', '')
                             # 대본이 수정되었을 수도 있으므로 item['script'] 사용
                             _, new_prompt = generate_prompt(
                                 api_key, index, item['script'], style_instruction,
-                                current_title, SELECTED_GENRE_MODE,
-                                target_language # <--- [NEW] 추가됨
+                                current_title, target_language
                             )
                             
                             # 2. 이미지 생성
