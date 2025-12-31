@@ -334,13 +334,14 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
 [필수 연출 지침]
 1. 무조건 2D 애니메이션 스타일로 그린다
 
-2. 캐릭터:
-   - 얼굴: 둥근 하얀색 원형 얼굴
+2. 캐릭터 (일관된 스타일 유지):
+   - 얼굴 형태: 심플한 동그란 하얀색 원형 (이모티콘처럼 단순한 원형)
+   - 얼굴 요소: 점 눈, 작은 입으로 심플하게 표현
+   - 표정 스타일: 귀여운 이모티콘 스타일 (^_^, >_<, :D 같은 느낌)
    - 피부: 순수한 하얀색
-   - 팔다리: 하얀색 살이 있는 부드러운 형태
+   - 몸: 슬림한 체형에 하얀색 피부
+   - 팔다리: 가늘고 부드러운 하얀색 (일반적인 사람 비율)
    - 의상: 직업/역할에 맞는 컬러풀한 의상
-   - 성별: 머리카락 스타일, 체형, 의상으로 구분
-   - 표정: 살짝 귀여운 느낌의 다양한 감정
 
 3. 배경: 2D로 디테일하게 몰입감 있게, 다양한 장소와 상황 연출
 4. 색감: 에메랄드, 보라, 주황, 핑크, 골드 등 다채로운 색상
@@ -757,14 +758,15 @@ with st.sidebar:
     # ==========================================
     STYLE_PRESETS = {
         "경제학": """
-무조건 2D 애니메이션 스타일. 대사에 어울리는 둥근 하얀색 얼굴 캐릭터로 설명이 잘되는 화면 자료 느낌.
+무조건 2D 애니메이션 스타일. 심플한 동그란 하얀색 얼굴 캐릭터로 설명이 잘되는 화면 자료 느낌.
 
-[캐릭터]
-- 얼굴: 둥근 하얀색 원형
-- 피부: 순수한 하얀색
-- 팔다리: 하얀색 살이 있는 부드러운 형태
+[캐릭터 - 일관된 스타일]
+- 얼굴 형태: 심플한 동그란 하얀색 원 (이모티콘처럼 단순)
+- 얼굴 요소: 점 눈, 작은 입 (심플하게)
+- 표정: 귀여운 이모티콘 스타일 표정
+- 몸: 슬림한 체형, 하얀색 피부
+- 팔다리: 가늘고 부드러운 하얀색 (일반 비율)
 - 의상: 직업에 맞는 컬러풀한 의상
-- 표정: 살짝 귀여운 다양한 감정
 
 [경제/비즈니스 의상]
 CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 / 자영업자: 컬러풀한 앞치마 / 학생: 교복
@@ -779,17 +781,18 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 에메랄드, 보라, 주황, 핑크, 민트, 골드 등 화려한 색상
 
 [고정 스타일]
-2D animation, white round circle face, white skin, soft fleshy limbs, cute expressions, colorful costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, simple white round circle face (like emoticon), dot eyes and small mouth, cute emoticon-style expressions, slim white body, slender limbs, colorful costumes, detailed 2D background, Korean keywords (2-3).
 """,
         "역사": """
-무조건 2D 애니메이션 스타일. 역사적 상황을 둥근 하얀색 얼굴 캐릭터로 설명.
+무조건 2D 애니메이션 스타일. 심플한 동그란 하얀색 얼굴 캐릭터로 역사 설명.
 
-[캐릭터]
-- 얼굴: 둥근 하얀색 원형
-- 피부: 순수한 하얀색
-- 팔다리: 하얀색 살이 있는 부드러운 형태
+[캐릭터 - 일관된 스타일]
+- 얼굴 형태: 심플한 동그란 하얀색 원 (이모티콘처럼 단순)
+- 얼굴 요소: 점 눈, 작은 입 (심플하게)
+- 표정: 귀여운 이모티콘 스타일 표정
+- 몸: 슬림한 체형, 하얀색 피부
+- 팔다리: 가늘고 부드러운 하얀색 (일반 비율)
 - 의상: 시대에 맞는 역사적 의상
-- 표정: 살짝 귀여운 다양한 감정
 
 [역사 의상]
 조선: 한복, 갓 / 로마: 토가, 갑옷 / 중세: 갑옷, 왕관, 드레스 / 왕족: 금색 장식
@@ -804,17 +807,18 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 왕실: 골드, 퍼플 / 전쟁: 딥 레드, 실버 / 평화: 에메랄드, 스카이블루
 
 [고정 스타일]
-2D animation, white round circle face, white skin, soft fleshy limbs, cute expressions, era-appropriate costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, simple white round circle face (like emoticon), dot eyes and small mouth, cute emoticon-style expressions, slim white body, slender limbs, era-appropriate costumes, detailed 2D background, Korean keywords (2-3).
 """,
         "과학": """
-무조건 2D 애니메이션 스타일. 과학/기술 상황을 둥근 하얀색 얼굴 캐릭터로 설명.
+무조건 2D 애니메이션 스타일. 과학/기술 상황을 심플한 동그란 하얀색 얼굴 캐릭터로 설명.
 
-[캐릭터]
-- 얼굴: 둥근 하얀색 원형
-- 피부: 순수한 하얀색
-- 팔다리: 하얀색 살이 있는 부드러운 형태
+[캐릭터 - 일관된 스타일]
+- 얼굴 형태: 심플한 동그란 하얀색 원 (이모티콘처럼 단순)
+- 얼굴 요소: 점 눈, 작은 입 (심플하게)
+- 표정: 귀여운 이모티콘 스타일 표정
+- 몸: 슬림한 체형, 하얀색 피부
+- 팔다리: 가늘고 부드러운 하얀색 (일반 비율)
 - 의상: 과학/기술 분야에 맞는 의상
-- 표정: 살짝 귀여운 다양한 감정
 
 [과학 의상]
 과학자: 흰 가운, 보안경 / 의사: 수술복, 청진기 / 우주비행사: 우주복 / 엔지니어: 작업복, 안전모
@@ -829,17 +833,18 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 실험실: 민트, 스카이블루 / 우주: 딥 퍼플, 네온 블루 / 디지털: 사이버 블루, 네온 핑크
 
 [고정 스타일]
-2D animation, white round circle face, white skin, soft fleshy limbs, cute expressions, science/tech costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, simple white round circle face (like emoticon), dot eyes and small mouth, cute emoticon-style expressions, slim white body, slender limbs, science/tech costumes, detailed 2D background, Korean keywords (2-3).
 """,
         "커스텀 (직접 입력)": """
-무조건 2D 애니메이션 스타일. 둥근 하얀색 얼굴 캐릭터로 설명이 잘되는 화면 자료 느낌.
+무조건 2D 애니메이션 스타일. 심플한 동그란 하얀색 얼굴 캐릭터로 설명이 잘되는 화면 자료 느낌.
 
-[캐릭터]
-- 얼굴: 둥근 하얀색 원형
-- 피부: 순수한 하얀색
-- 팔다리: 하얀색 살이 있는 부드러운 형태
+[캐릭터 - 일관된 스타일]
+- 얼굴 형태: 심플한 동그란 하얀색 원 (이모티콘처럼 단순)
+- 얼굴 요소: 점 눈, 작은 입 (심플하게)
+- 표정: 귀여운 이모티콘 스타일 표정
+- 몸: 슬림한 체형, 하얀색 피부
+- 팔다리: 가늘고 부드러운 하얀색 (일반 비율)
 - 의상: 직업/역할에 맞는 컬러풀한 의상
-- 표정: 살짝 귀여운 다양한 감정
 
 [배경]
 2D로 디테일하게 몰입감 있게, 대본에 맞는 상황 연출. 하나의 통일된 장면.
@@ -848,7 +853,7 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 핵심 키워드 2~3개만 자연스럽게 배치
 
 [고정 스타일]
-2D animation, white round circle face, white skin, soft fleshy limbs, cute expressions, colorful costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, simple white round circle face (like emoticon), dot eyes and small mouth, cute emoticon-style expressions, slim white body, slender limbs, colorful costumes, detailed 2D background, Korean keywords (2-3).
 """
     }
 
