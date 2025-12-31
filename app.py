@@ -320,7 +320,7 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
 
     full_instruction = f"""
 [역할]
-당신은 '2D 스틱맨 애니메이션 전문 프롬프트 디렉터'입니다.
+당신은 '2D 캐릭터 애니메이션 전문 프롬프트 디렉터'입니다.
 
 [전체 영상 주제]
 "{video_title}"
@@ -329,21 +329,22 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
 {style_instruction}
 
 [프롬프트 작성 공식]
-[카메라 연출(앵글)] + [스틱맨 개성(직업별 의상/컬러) + 구체적 행동] + [장소/시간을 분위기로 녹여냄 + 다채로운 조명] + [글자 없는 배경 강제] + [고정 문장]
+[카메라 연출(앵글)] + [캐릭터 개성(직업별 의상/컬러) + 구체적 행동] + [장소/시간을 분위기로 녹여냄 + 다채로운 조명] + [고정 문장]
 
 [필수 연출 지침]
 1. 카메라 앵글: 로우앵글, 하이앵글, 미디엄숏, 버드아이뷰 등 다양하게 활용
-2. 스틱맨 캐릭터:
-   - 얼굴은 반드시 하얀색 동그란 원형
-   - 몸체는 반드시 컬러풀한 의상을 입고 있어야 함 (하얀 몸체만 금지!)
-   - 성별/나이에 따라 머리카락 스타일 다르게 (짧은머리, 긴머리, 백발 등)
+2. 캐릭터:
+   - 얼굴: 반드시 하얀색 동그란 원형
+   - 몸체: 하얀색 피부의 부드러운 인체형 (1자 스틱 아님!)
+   - 팔다리: 하얀색 살이 있는 부드러운 팔다리 (막대기 형태 금지)
+   - 의상: 컬러풀한 의상을 반드시 착용
+   - 머리카락: 성별/나이에 따라 다르게 (짧은머리, 긴머리, 백발 등)
    - 직업/역할에 맞는 의상과 소품 필수
 3. 색감: 에메랄드, 보라, 주황, 핑크, 골드 등 다채로운 색상 적극 활용
-4. 배경: 대본 내용에 맞는 분위기로 조명과 배경 자동 조정
-5. 글자 없는 배경: 배경의 모든 간판과 벽면은 글자 없는 추상적 기하학 패턴
-6. 분할화면 절대 금지, 하나의 통일된 장면으로 연출
+4. 배경: 대본 내용에 맞는 상황과 장소를 사실적인 애니메이션 스타일로 연출
+5. 분할화면 절대 금지, 하나의 통일된 장면으로 연출
+6. 텍스트: 핵심 키워드 2~3개를 화면에 자연스럽게 배치
 7. 텍스트 언어: {lang_guide} {lang_example}
-8. 화면 모서리/가장자리에 글자 배치 금지
 
 [임무]
 제공된 대본 조각을 바탕으로, 이미지 생성 AI가 그릴 수 있는 구체적인 묘사 프롬프트를 작성하십시오.
@@ -354,8 +355,9 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
   - 카메라 앵글 지정
   - 캐릭터의 의상, 머리카락, 소품 구체적 묘사
   - 캐릭터의 행동과 감정 표현
-  - 배경과 조명 분위기
+  - 대본에 맞는 배경과 조명 분위기
   - 시각적 은유 (추상적 내용일 경우)
+  - 핵심 한국어 키워드 2~3개
 
 [출력 형식]
 - 순수 텍스트만 출력 (마크다운 강조 **금지**)
@@ -756,11 +758,12 @@ with st.sidebar:
 [카메라 연출]
 로우앵글, 하이앵글, 미디엄숏, 버드아이뷰 등 다양한 카메라 앵글로 역동적인 장면 연출.
 
-[스틱맨 캐릭터 - 절대 규칙]
-- 얼굴: 하얀색 동그란 원형 (필수 유지)
-- 몸체: 반드시 의상을 입고 있어야 함 (하얀 몸체만 있으면 안 됨!)
-- 개성: 성별, 나이에 따라 머리카락 스타일 다르게 표현 가능 (짧은머리, 긴머리, 백발 등)
-- 직업/역할/상황에 맞는 컬러풀한 의상 필수
+[캐릭터 스타일 - 절대 규칙]
+- 얼굴: 하얀색 동그란 원형 (필수)
+- 몸체: 하얀색 피부의 부드러운 인체형 (1자 스틱 아님!)
+- 팔다리: 하얀색 살이 있는 부드러운 팔다리 (막대기 형태 금지)
+- 의상: 몸체 위에 컬러풀한 의상을 반드시 착용
+- 개성: 성별, 나이에 따라 머리카락 스타일 다르게 (짧은머리, 긴머리, 백발 등)
 
 [경제/비즈니스 의상 가이드]
 - CEO/사업가: 네이비 정장, 빨간 넥타이, 금색 커프스
@@ -773,28 +776,31 @@ with st.sidebar:
 - 학생: 교복 또는 후드티
 - 노인: 조끼, 지팡이, 백발
 
-[다채로운 색감]
-- 에메랄드, 보라, 주황, 핑크, 민트, 골드 등 화려한 색상 적극 활용
-- 상승/긍정: 골든 앰버, 에메랄드 그린
-- 하락/위기: 딥 레드, 차가운 블루
-- 신뢰/안정: 로열 블루, 틸
-
-[배경 연출]
-- 대본 내용에 맞는 분위기로 조명과 배경 자동 조정
-- 배경의 모든 간판과 벽면은 글자 없는 추상적 기하학 패턴으로 처리
+[배경 및 물체]
+- 배경과 물체는 사실적인 애니메이션 스타일로 디테일하게 묘사
+- 대본 내용에 맞는 상황과 장소를 현실감 있게 연출
 - 분할화면 절대 금지, 하나의 통일된 장면
 
+[텍스트 연출]
+- 핵심 키워드 2~3개를 한국어로 화면에 자연스럽게 배치
+- 숫자, 퍼센트, 화폐 기호 강조 가능
+
+[다채로운 색감]
+- 에메랄드, 보라, 주황, 핑크, 민트, 골드 등 화려한 색상 적극 활용
+
 [고정 스타일]
-The style is 2D stickman animation with white circle face. Characters MUST wear colorful role-appropriate costumes with distinct hairstyles by gender/age. All background signs and walls are abstract geometric patterns without text. Vivid colors, dynamic camera angles, no split screens.
+2D animation with white circle face and white skin body with soft fleshy arms and legs (not stick figure lines). Characters wear colorful costumes. Background is realistic anime style matching the script context. Korean text keywords (2-3) displayed naturally. No split screens.
 """,
         "역사": """
 [카메라 연출]
 로우앵글, 하이앵글, 미디엄숏, 버드아이뷰 등 다양한 카메라 앵글로 역동적인 장면 연출.
 
-[스틱맨 캐릭터 - 절대 규칙]
-- 얼굴: 하얀색 동그란 원형 (필수 유지)
-- 몸체: 반드시 시대에 맞는 의상을 입고 있어야 함!
-- 개성: 성별, 나이에 따라 머리카락 스타일 다르게 표현 (상투, 갓, 긴머리, 백발 등)
+[캐릭터 스타일 - 절대 규칙]
+- 얼굴: 하얀색 동그란 원형 (필수)
+- 몸체: 하얀색 피부의 부드러운 인체형 (1자 스틱 아님!)
+- 팔다리: 하얀색 살이 있는 부드러운 팔다리 (막대기 형태 금지)
+- 의상: 시대에 맞는 역사적 의상을 반드시 착용
+- 개성: 성별, 나이에 따라 머리카락 스타일 (상투, 갓, 긴머리, 백발 등)
 
 [역사/시대별 의상 가이드]
 - 조선시대: 한복, 갓, 도포, 저고리
@@ -805,28 +811,32 @@ The style is 2D stickman animation with white circle face. Characters MUST wear 
 - 농민/평민: 소박한 색상의 작업복
 - 군인/장수: 갑옷, 투구, 무기
 
+[배경 및 물체]
+- 배경과 물체는 사실적인 애니메이션 스타일로 시대적 분위기 묘사
+- 대본 내용에 맞는 역사적 장소와 상황을 디테일하게 연출
+- 분할화면 절대 금지, 하나의 통일된 장면
+
+[텍스트 연출]
+- 핵심 키워드 2~3개를 한국어로 화면에 자연스럽게 배치
+
 [다채로운 색감]
 - 왕실/귀족: 골드, 퍼플, 크림슨
 - 전쟁/긴장: 딥 레드, 블랙, 실버
 - 평화/번영: 에메랄드, 스카이블루
-- 고난/시련: 그레이, 브라운
-
-[배경 연출]
-- 대본의 시대와 장소에 맞는 분위기로 조명과 배경 자동 조정
-- 배경의 모든 간판과 벽면은 글자 없는 추상적 기하학 패턴으로 처리
-- 분할화면 절대 금지, 하나의 통일된 장면
 
 [고정 스타일]
-The style is 2D stickman animation with white circle face. Characters MUST wear era-appropriate historical costumes with distinct hairstyles by gender/age. All background signs and walls are abstract geometric patterns without text. Vivid colors, dynamic camera angles, no split screens.
+2D animation with white circle face and white skin body with soft fleshy arms and legs (not stick figure lines). Characters wear era-appropriate historical costumes. Background is realistic anime style matching the script's historical context. Korean text keywords (2-3) displayed naturally. No split screens.
 """,
         "과학": """
 [카메라 연출]
 로우앵글, 하이앵글, 미디엄숏, 버드아이뷰 등 다양한 카메라 앵글로 역동적인 장면 연출.
 
-[스틱맨 캐릭터 - 절대 규칙]
-- 얼굴: 하얀색 동그란 원형 (필수 유지)
-- 몸체: 반드시 의상을 입고 있어야 함!
-- 개성: 성별, 나이에 따라 머리카락 스타일 다르게 표현 가능
+[캐릭터 스타일 - 절대 규칙]
+- 얼굴: 하얀색 동그란 원형 (필수)
+- 몸체: 하얀색 피부의 부드러운 인체형 (1자 스틱 아님!)
+- 팔다리: 하얀색 살이 있는 부드러운 팔다리 (막대기 형태 금지)
+- 의상: 과학/기술 분야에 맞는 의상을 반드시 착용
+- 개성: 성별, 나이에 따라 머리카락 스타일 다르게 표현
 
 [과학/기술 의상 가이드]
 - 과학자: 흰 가운, 보안경, 실험도구
@@ -835,30 +845,38 @@ The style is 2D stickman animation with white circle face. Characters MUST wear 
 - 엔지니어: 작업복, 안전모, 도구벨트
 - 프로그래머: 캐주얼 후드티, 노트북
 - 교수/연구원: 정장, 안경, 책
-- 로봇/AI: 메탈릭 바디, 네온 라인
+
+[배경 및 물체]
+- 배경과 물체는 사실적인 애니메이션 스타일로 과학적 분위기 묘사
+- 대본 내용에 맞는 과학적 장소와 상황을 디테일하게 연출
+- 분할화면 절대 금지, 하나의 통일된 장면
+
+[텍스트 연출]
+- 핵심 키워드 2~3개를 한국어로 화면에 자연스럽게 배치
 
 [다채로운 색감]
 - 실험실: 민트, 화이트, 스카이블루
 - 우주/SF: 딥 퍼플, 네온 블루, 실버
-- 자연/생물: 에메랄드, 라임, 오렌지
-- 기술/디지털: 사이버 블루, 네온 핑크, 일렉트릭 그린
-
-[배경 연출]
-- 대본 내용에 맞는 과학적 분위기로 조명과 배경 자동 조정
-- 배경의 모든 간판과 벽면은 글자 없는 추상적 기하학 패턴으로 처리
-- 분할화면 절대 금지, 하나의 통일된 장면
+- 기술/디지털: 사이버 블루, 네온 핑크
 
 [고정 스타일]
-The style is 2D stickman animation with white circle face. Characters MUST wear science/tech-appropriate costumes with distinct hairstyles by gender/age. All background signs and walls are abstract geometric patterns without text. Vivid colors, dynamic camera angles, no split screens.
+2D animation with white circle face and white skin body with soft fleshy arms and legs (not stick figure lines). Characters wear science/tech costumes. Background is realistic anime style matching the script's scientific context. Korean text keywords (2-3) displayed naturally. No split screens.
 """,
         "커스텀 (직접 입력)": """
-[스틱맨 기본 규칙]
+[캐릭터 기본 규칙]
 - 얼굴: 하얀색 동그란 원형
-- 몸체: 반드시 의상 착용
-- 개성: 성별/나이에 따라 머리카락 표현 가능
+- 몸체: 하얀색 피부의 부드러운 인체형 (스틱 아님)
+- 팔다리: 하얀색 살이 있는 부드러운 형태
+- 의상: 컬러풀한 의상 착용
+- 머리카락: 성별/나이에 따라 다르게
+
+[배경]
+- 사실적인 애니메이션 스타일
+- 대본에 맞는 상황 연출
+- 핵심 키워드 2~3개 한국어로 표시
 
 [고정 스타일]
-The style is 2D stickman animation with white circle face. Characters wear colorful costumes. All background signs are abstract patterns without text. No split screens.
+2D animation with white circle face and white skin body with soft fleshy limbs. Colorful costumes. Realistic anime background matching script context. Korean text keywords displayed. No split screens.
 """
     }
 
