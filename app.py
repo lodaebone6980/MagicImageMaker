@@ -338,8 +338,8 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
    - 얼굴: 심플한 동그란 하얀색 원형
    - 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
    - 피부: 순수한 하얀색
-   - 몸: 날씬하고 길쭉한 체형
-   - 팔다리: 가늘고 길쭉한 하얀색 팔다리 (일반적인 사람 비율)
+   - 몸: 날씬한 체형
+   - 팔다리: 몸에 맞는 자연스러운 비율의 하얀색 팔다리
    - 의상: 직업/역할에 맞는 컬러풀한 의상
 
 3. 배경: 2D로 디테일하게 몰입감 있게, 다양한 장소와 상황 연출
@@ -365,6 +365,8 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
 - 순수 텍스트만 출력 (마크다운 강조 **금지**)
 - 무조건 한국어로만 작성
 - 부가 설명 없이 오직 프롬프트 텍스트만 출력
+- 절대 이모티콘 기호 사용 금지 (^_^, >_<, :D, ㅠㅠ 등 금지)
+- 표정은 글로 묘사 (예: 밝은 미소, 놀란 표정, 진지한 얼굴)
 """
 
     # 공통 실행 로직
@@ -726,14 +728,44 @@ def merge_all_videos(video_paths, output_dir):
 # ==========================================
 with st.sidebar:
     st.header("⚙️ 환경 설정")
-    
-    # 1. Google API Key 자동 로드 (secrets.toml 활용)
-    # .streamlit/secrets.toml 파일에 [general] google_api_key = "..." 가 있으면 자동 로드
-    if "general" in st.secrets and "google_api_key" in st.secrets["general"]:
-        api_key = st.secrets["general"]["google_api_key"]
-        st.success("🔑 Google API Key가 로드되었습니다.")
-    else:
-        api_key = st.text_input("🔑 Google API Key", type="password", help="secrets.toml이 없으면 직접 입력하세요.")
+
+    # 1. Google API Key 설정 (멀티 API 지원)
+    st.subheader("🔑 API 키 설정")
+
+    # API 키 개수 선택 드롭박스
+    num_api_keys = st.selectbox(
+        "API 키 개수",
+        options=[1, 2, 3, 4],
+        index=0,
+        help="여러 API 키를 사용하면 병렬 처리로 더 빠르게 생성할 수 있습니다. (키당 분당 20개)"
+    )
+
+    # API 키 입력 필드들
+    api_keys = []
+
+    # secrets.toml에서 자동 로드 시도
+    for i in range(num_api_keys):
+        secret_key = f"google_api_key_{i+1}" if i > 0 else "google_api_key"
+
+        if "general" in st.secrets and secret_key in st.secrets["general"]:
+            key = st.secrets["general"][secret_key]
+            st.success(f"🔑 API Key {i+1} 로드됨")
+            api_keys.append(key)
+        else:
+            key = st.text_input(
+                f"🔑 Google API Key {i+1}" if num_api_keys > 1 else "🔑 Google API Key",
+                type="password",
+                key=f"api_key_{i}",
+                help=f"API 키 {i+1}번을 입력하세요."
+            )
+            if key:
+                api_keys.append(key)
+
+    # 호환성을 위해 첫 번째 키를 api_key로도 저장
+    api_key = api_keys[0] if api_keys else ""
+
+    if num_api_keys > 1 and len(api_keys) == num_api_keys:
+        st.info(f"✅ {num_api_keys}개 API 키 설정됨 → 분당 최대 {num_api_keys * 20}개 생성 가능")
 
     st.markdown("---")
     
@@ -774,8 +806,8 @@ with st.sidebar:
 [캐릭터 - 일관된 스타일]
 - 얼굴: 심플한 동그란 하얀색 원형
 - 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
-- 몸: 날씬하고 길쭉한 체형, 하얀색 피부
-- 팔다리: 가늘고 길쭉한 하얀색 팔다리 (일반 비율)
+- 몸: 날씬한 체형, 하얀색 피부
+- 팔다리: 몸에 맞는 자연스러운 비율의 하얀색 팔다리
 - 의상: 직업에 맞는 컬러풀한 의상
 
 [경제/비즈니스 의상]
@@ -791,7 +823,7 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 에메랄드, 보라, 주황, 핑크, 민트, 골드 등 화려한 색상
 
 [고정 스타일]
-2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), thin elongated white body, long slender limbs, colorful costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), slim white body, naturally proportioned limbs, colorful costumes, detailed 2D background, Korean keywords (2-3).
 """,
         "역사": """
 무조건 2D 애니메이션 스타일. 심플한 동그란 하얀색 얼굴 캐릭터로 역사 설명.
@@ -799,8 +831,8 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 [캐릭터 - 일관된 스타일]
 - 얼굴: 심플한 동그란 하얀색 원형
 - 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
-- 몸: 날씬하고 길쭉한 체형, 하얀색 피부
-- 팔다리: 가늘고 길쭉한 하얀색 팔다리 (일반 비율)
+- 몸: 날씬한 체형, 하얀색 피부
+- 팔다리: 몸에 맞는 자연스러운 비율의 하얀색 팔다리
 - 의상: 시대에 맞는 역사적 의상
 
 [역사 의상]
@@ -816,7 +848,7 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 왕실: 골드, 퍼플 / 전쟁: 딥 레드, 실버 / 평화: 에메랄드, 스카이블루
 
 [고정 스타일]
-2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), thin elongated white body, long slender limbs, era-appropriate costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), slim white body, naturally proportioned limbs, era-appropriate costumes, detailed 2D background, Korean keywords (2-3).
 """,
         "과학": """
 무조건 2D 애니메이션 스타일. 과학/기술 상황을 심플한 동그란 하얀색 얼굴 캐릭터로 설명.
@@ -824,8 +856,8 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 [캐릭터 - 일관된 스타일]
 - 얼굴: 심플한 동그란 하얀색 원형
 - 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
-- 몸: 날씬하고 길쭉한 체형, 하얀색 피부
-- 팔다리: 가늘고 길쭉한 하얀색 팔다리 (일반 비율)
+- 몸: 날씬한 체형, 하얀색 피부
+- 팔다리: 몸에 맞는 자연스러운 비율의 하얀색 팔다리
 - 의상: 과학/기술 분야에 맞는 의상
 
 [과학 의상]
@@ -841,7 +873,7 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 실험실: 민트, 스카이블루 / 우주: 딥 퍼플, 네온 블루 / 디지털: 사이버 블루, 네온 핑크
 
 [고정 스타일]
-2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), thin elongated white body, long slender limbs, science/tech costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), slim white body, naturally proportioned limbs, science/tech costumes, detailed 2D background, Korean keywords (2-3).
 """,
         "커스텀 (직접 입력)": """
 무조건 2D 애니메이션 스타일. 심플한 동그란 하얀색 얼굴 캐릭터로 설명이 잘되는 화면 자료 느낌.
@@ -849,8 +881,8 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 [캐릭터 - 일관된 스타일]
 - 얼굴: 심플한 동그란 하얀색 원형
 - 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
-- 몸: 날씬하고 길쭉한 체형, 하얀색 피부
-- 팔다리: 가늘고 길쭉한 하얀색 팔다리 (일반 비율)
+- 몸: 날씬한 체형, 하얀색 피부
+- 팔다리: 몸에 맞는 자연스러운 비율의 하얀색 팔다리
 - 의상: 직업/역할에 맞는 컬러풀한 의상
 
 [배경]
@@ -860,7 +892,7 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 핵심 키워드 2~3개만 자연스럽게 배치
 
 [고정 스타일]
-2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), thin elongated white body, long slender limbs, colorful costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), slim white body, naturally proportioned limbs, colorful costumes, detailed 2D background, Korean keywords (2-3).
 """
     }
 
@@ -1324,11 +1356,17 @@ if start_btn:
             shutil.rmtree(IMAGE_OUTPUT_DIR) # 폴더 통째로 삭제
         init_folders() # 다시 깨끗한 폴더 생성
         
-        client = genai.Client(api_key=api_key)
-        
+        # [멀티 API 지원] 여러 클라이언트 생성
+        clients = []
+        for key in api_keys:
+            clients.append(genai.Client(api_key=key))
+
+        # 호환성을 위해 첫 번째 클라이언트를 client로도 저장
+        client = clients[0] if clients else genai.Client(api_key=api_key)
+
         status_box = st.status("작업 진행 중...", expanded=True)
         progress_bar = st.progress(0)
-        
+
         # 1. 대본 분할 (번호 기반)
         status_box.write(f"✂️ 번호(1. 2. 3.)로 분할된 대본 파싱 중...")
         chunks = parse_numbered_script(script_input)
@@ -1339,7 +1377,7 @@ if start_btn:
             st.stop()
 
         status_box.write(f"✅ {total_scenes}개 씬으로 파싱 완료.")
-        
+
         current_video_title = st.session_state.get('video_title', "").strip()
         if not current_video_title:
             current_video_title = "전반적인 대본 분위기에 어울리는 배경 (Context based on the script)"
@@ -1360,35 +1398,55 @@ if start_btn:
                     current_video_title,
                     target_language
                 ))
-            
+
             for i, future in enumerate(as_completed(futures)):
                 prompts.append(future.result())
                 progress_bar.progress((i + 1) / (total_scenes * 2))
-        
-        prompts.sort(key=lambda x: x[0])
-        
-        # ... (이전 코드: 프롬프트 생성 부분은 그대로 유지) ...
 
-        # 3. 이미지 생성 (병렬 처리 + 속도 조절)
-        status_box.write(f"🎨 이미지 생성 중 ({SELECTED_IMAGE_MODEL})... (API 보호를 위해 천천히 진행됩니다)")
+        prompts.sort(key=lambda x: x[0])
+
+        # 3. 이미지 생성 (멀티 API 병렬 처리)
+        num_clients = len(clients)
+        total_rate_limit = num_clients * 20  # 분당 최대 요청 수 (키당 20개)
+
+        if num_clients > 1:
+            status_box.write(f"🎨 이미지 생성 중 ({SELECTED_IMAGE_MODEL}) - {num_clients}개 API 병렬 처리 (분당 최대 {total_rate_limit}개)")
+        else:
+            status_box.write(f"🎨 이미지 생성 중 ({SELECTED_IMAGE_MODEL})... (API 보호를 위해 천천히 진행됩니다)")
+
         results = []
-        
-        # [중요] API 제한을 피하기 위해 worker 수를 강제로 조절하거나, 제출 간격을 둡니다.
-        # 사용자가 설정한 max_workers를 쓰되, 요청 간격을 벌립니다.
-        
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+
+        # [멀티 API] API 키 개수에 따라 worker 수와 대기 시간 조절
+        # 키 1개: 3초 간격 (분당 20개)
+        # 키 2개: 1.5초 간격 (분당 40개)
+        # 키 3개: 1초 간격 (분당 60개)
+        # 키 4개: 0.75초 간격 (분당 80개)
+        sleep_interval = 3.0 / num_clients
+        adjusted_workers = min(max_workers, num_clients * 5)  # API 키당 5개 worker
+
+        with ThreadPoolExecutor(max_workers=adjusted_workers) as executor:
             future_to_meta = {}
+            request_count = 0
+
             for s_num, prompt_text in prompts:
                 idx = s_num - 1
                 orig_text = chunks[idx]
                 fname = make_filename(s_num, orig_text)
-                
-                # [핵심 수정] 요청을 한꺼번에 쏘지 않고 3초씩 쉬면서 제출합니다.
-                # 이렇게 하면 분당 20회 제한 안쪽으로 자연스럽게 들어옵니다.
-                time.sleep(3) 
-                
-                future = executor.submit(generate_image, client, prompt_text, fname, IMAGE_OUTPUT_DIR, SELECTED_IMAGE_MODEL)
+
+                # [라운드 로빈] 클라이언트 순환 배정
+                current_client = clients[request_count % num_clients]
+
+                # [속도 조절] API 키 개수에 맞춰 대기
+                time.sleep(sleep_interval)
+
+                # [80개 제한] 멀티 API 사용 시 80개마다 1분 대기
+                if num_clients > 1 and request_count > 0 and request_count % total_rate_limit == 0:
+                    status_box.write(f"⏳ API 제한 보호: {request_count}개 완료, 60초 대기 중...")
+                    time.sleep(60)
+
+                future = executor.submit(generate_image, current_client, prompt_text, fname, IMAGE_OUTPUT_DIR, SELECTED_IMAGE_MODEL)
                 future_to_meta[future] = (s_num, fname, orig_text, prompt_text)
+                request_count += 1
             
             # 결과 수집
             completed_cnt = 0
