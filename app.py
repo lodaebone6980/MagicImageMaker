@@ -335,11 +335,10 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
 1. 무조건 2D 애니메이션 스타일로 그린다
 
 2. 캐릭터 (일관된 스타일 유지):
-   - 얼굴 형태: 심플한 동그란 하얀색 원형 (단순한 원형)
-   - 얼굴 요소: 작은 점 두 개로 눈, 단순한 선으로 입
-   - 표정: 상황에 맞는 자연스러운 표정 (웃음, 놀람, 진지함 등)
+   - 얼굴: 심플한 동그란 하얀색 원형
+   - 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
    - 피부: 순수한 하얀색
-   - 몸: 날씬하고 길쭉한 체형, 하얀색 피부
+   - 몸: 날씬하고 길쭉한 체형
    - 팔다리: 가늘고 길쭉한 하얀색 팔다리 (일반적인 사람 비율)
    - 의상: 직업/역할에 맞는 컬러풀한 의상
 
@@ -773,9 +772,8 @@ with st.sidebar:
 무조건 2D 애니메이션 스타일. 심플한 동그란 하얀색 얼굴 캐릭터로 설명이 잘되는 화면 자료 느낌.
 
 [캐릭터 - 일관된 스타일]
-- 얼굴 형태: 심플한 동그란 하얀색 원 (단순한 원형)
-- 얼굴 요소: 작은 점 두 개로 눈, 단순한 선으로 입
-- 표정: 상황에 맞는 자연스러운 표정 (웃음, 놀람, 진지함 등)
+- 얼굴: 심플한 동그란 하얀색 원형
+- 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
 - 몸: 날씬하고 길쭉한 체형, 하얀색 피부
 - 팔다리: 가늘고 길쭉한 하얀색 팔다리 (일반 비율)
 - 의상: 직업에 맞는 컬러풀한 의상
@@ -793,15 +791,14 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 에메랄드, 보라, 주황, 핑크, 민트, 골드 등 화려한 색상
 
 [고정 스타일]
-2D animation, simple white round circle face, two small dots for eyes, simple line for mouth, natural expressions, thin elongated white body, long slender limbs, colorful costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), thin elongated white body, long slender limbs, colorful costumes, detailed 2D background, Korean keywords (2-3).
 """,
         "역사": """
 무조건 2D 애니메이션 스타일. 심플한 동그란 하얀색 얼굴 캐릭터로 역사 설명.
 
 [캐릭터 - 일관된 스타일]
-- 얼굴 형태: 심플한 동그란 하얀색 원 (단순한 원형)
-- 얼굴 요소: 작은 점 두 개로 눈, 단순한 선으로 입
-- 표정: 상황에 맞는 자연스러운 표정 (웃음, 놀람, 진지함 등)
+- 얼굴: 심플한 동그란 하얀색 원형
+- 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
 - 몸: 날씬하고 길쭉한 체형, 하얀색 피부
 - 팔다리: 가늘고 길쭉한 하얀색 팔다리 (일반 비율)
 - 의상: 시대에 맞는 역사적 의상
@@ -819,15 +816,14 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 왕실: 골드, 퍼플 / 전쟁: 딥 레드, 실버 / 평화: 에메랄드, 스카이블루
 
 [고정 스타일]
-2D animation, simple white round circle face, two small dots for eyes, simple line for mouth, natural expressions, thin elongated white body, long slender limbs, era-appropriate costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), thin elongated white body, long slender limbs, era-appropriate costumes, detailed 2D background, Korean keywords (2-3).
 """,
         "과학": """
 무조건 2D 애니메이션 스타일. 과학/기술 상황을 심플한 동그란 하얀색 얼굴 캐릭터로 설명.
 
 [캐릭터 - 일관된 스타일]
-- 얼굴 형태: 심플한 동그란 하얀색 원 (단순한 원형)
-- 얼굴 요소: 작은 점 두 개로 눈, 단순한 선으로 입
-- 표정: 상황에 맞는 자연스러운 표정 (웃음, 놀람, 진지함 등)
+- 얼굴: 심플한 동그란 하얀색 원형
+- 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
 - 몸: 날씬하고 길쭉한 체형, 하얀색 피부
 - 팔다리: 가늘고 길쭉한 하얀색 팔다리 (일반 비율)
 - 의상: 과학/기술 분야에 맞는 의상
@@ -845,15 +841,14 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 실험실: 민트, 스카이블루 / 우주: 딥 퍼플, 네온 블루 / 디지털: 사이버 블루, 네온 핑크
 
 [고정 스타일]
-2D animation, simple white round circle face, two small dots for eyes, simple line for mouth, natural expressions, thin elongated white body, long slender limbs, science/tech costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), thin elongated white body, long slender limbs, science/tech costumes, detailed 2D background, Korean keywords (2-3).
 """,
         "커스텀 (직접 입력)": """
 무조건 2D 애니메이션 스타일. 심플한 동그란 하얀색 얼굴 캐릭터로 설명이 잘되는 화면 자료 느낌.
 
 [캐릭터 - 일관된 스타일]
-- 얼굴 형태: 심플한 동그란 하얀색 원 (단순한 원형)
-- 얼굴 요소: 작은 점 두 개로 눈, 단순한 선으로 입
-- 표정: 상황에 맞는 자연스러운 표정 (웃음, 놀람, 진지함 등)
+- 얼굴: 심플한 동그란 하얀색 원형
+- 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
 - 몸: 날씬하고 길쭉한 체형, 하얀색 피부
 - 팔다리: 가늘고 길쭉한 하얀색 팔다리 (일반 비율)
 - 의상: 직업/역할에 맞는 컬러풀한 의상
@@ -865,7 +860,7 @@ CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 
 핵심 키워드 2~3개만 자연스럽게 배치
 
 [고정 스타일]
-2D animation, simple white round circle face, two small dots for eyes, simple line for mouth, natural expressions, thin elongated white body, long slender limbs, colorful costumes, detailed 2D background, Korean keywords (2-3).
+2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), thin elongated white body, long slender limbs, colorful costumes, detailed 2D background, Korean keywords (2-3).
 """
     }
 
