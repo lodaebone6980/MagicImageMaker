@@ -315,8 +315,8 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
     else:
         lang_guide = f"화면 속 핵심 키워드는 무조건 '{target_language}'로 표기하십시오."
 
-    # 2. [중요] Gems 스타일 강제 고정용 Suffix (영어) - 스틱맨 정체성 확보
-    style_suffix = ", The style is white circle-faced stickman 2D animation with simple lines and flat vivid color planes, emphasizing vivid architectural atmosphere and cinematic lighting."
+    # 2. [중요] Gems 스타일 강제 고정용 Suffix (영어) - 스틱맨 정체성 + 하얀 몸/팔다리 확보
+    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, rendered with simple lines and flat vivid color planes, emphasizing vivid architectural atmosphere and cinematic lighting."
 
     # 3. 프롬프트 작성 지침 (Gems 공식 + 텍스트 통합)
     full_instruction = f"""
@@ -335,8 +335,8 @@ You must write the prompt in **Korean** following this exact order:
 1. **[Camera Angle & Shot]**: 구체적인 카메라 앵글 지정
    (예: 로우 앵글 샷, 드론 뷰, 클로즈업, 와이드 샷, 버드아이 뷰)
 
-2. **[Character & Costume]**: "White circle-faced stickman"을 반드시 명시하고 구체적인 의상/색상 지정
-   (예: "네이비 정장을 입은 하얀 원형 얼굴의 스틱맨 CEO", "낡은 회색 가디건을 입은 스틱맨")
+2. **[Character & Costume]**: "White circle-faced stickman with white body and white limbs"를 반드시 명시하고 구체적인 의상/색상 지정
+   (예: "하얀 몸과 하얀 팔다리를 가진 스틱맨 CEO가 네이비 정장을 입고 있다", "하얀 원형 얼굴과 하얀 팔다리의 스틱맨이 낡은 회색 가디건을 입고 있다")
 
 3. **[Action & Emotion]**: 스틱맨이 무엇을 하고 있는지, 어떤 감정인지 묘사
    (예: 자신감 넘치는 표정으로 프레젠테이션 중, 절망적인 표정으로 고개를 숙이고 있다)
@@ -799,12 +799,13 @@ with st.sidebar:
     STYLE_PRESETS = {
         "경제학": """
 [Core Identity - 절대 규칙]
-- Character: "White circle-faced stickman" (반드시 하얀 원형 얼굴의 스틱맨)
-- Body: 날씬한 스틱맨 몸체, 하얀 피부, 자연스러운 비율
-- Style: 2D 애니메이션 스타일, 선명한 플랫 컬러, 심플한 라인
+- Character: MUST be a "White circle-faced stickman"
+- **Body & Limbs: 몸, 팔, 다리 전체가 반드시 순수한 하얀색이어야 함. 검은색 스틱맨 금지.**
+- Face: 심플한 하얀 원형 얼굴에 2D 스타일 표정
+- Style: 2D 애니메이션, 심플한 라인, 선명한 플랫 컬러
 
 [Costume & Role Rule - 의상 규칙]
-- 절대 일반적인 사람으로 그리지 말 것. 반드시 역할에 맞는 "코스튬" 지정
+- 절대 일반적인 사람으로 그리지 말 것. 하얀 몸 위에 역할에 맞는 "코스튬" 입히기
 - CEO: 네이비 정장, 빨간 넥타이 / 가난한 사람: 낡은 회색 가디건
 - 직장인: 와이셔츠, 블라우스 / 부자: 금색 액세서리
 - 자영업자: 컬러풀한 앞치마 / 학생: 교복
@@ -820,12 +821,13 @@ with st.sidebar:
 """,
         "역사": """
 [Core Identity - 절대 규칙]
-- Character: "White circle-faced stickman" (반드시 하얀 원형 얼굴의 스틱맨)
-- Body: 날씬한 스틱맨 몸체, 하얀 피부, 자연스러운 비율
-- Style: 2D 애니메이션 스타일, 선명한 플랫 컬러, 심플한 라인
+- Character: MUST be a "White circle-faced stickman"
+- **Body & Limbs: 몸, 팔, 다리 전체가 반드시 순수한 하얀색이어야 함. 검은색 스틱맨 금지.**
+- Face: 심플한 하얀 원형 얼굴에 2D 스타일 표정
+- Style: 2D 애니메이션, 심플한 라인, 선명한 플랫 컬러
 
 [Costume & Role Rule - 역사 의상]
-- 절대 일반적인 사람으로 그리지 말 것. 반드시 시대에 맞는 "코스튬" 지정
+- 절대 일반적인 사람으로 그리지 말 것. 하얀 몸 위에 시대에 맞는 "코스튬" 입히기
 - 조선: 한복, 갓 / 로마: 토가, 갑옷 / 중세: 갑옷, 왕관, 드레스
 - 왕족: 금색 장식, 왕관 / 농민: 소박한 옷 / 전사: 무기와 갑옷
 
@@ -840,12 +842,13 @@ with st.sidebar:
 """,
         "과학": """
 [Core Identity - 절대 규칙]
-- Character: "White circle-faced stickman" (반드시 하얀 원형 얼굴의 스틱맨)
-- Body: 날씬한 스틱맨 몸체, 하얀 피부, 자연스러운 비율
-- Style: 2D 애니메이션 스타일, 선명한 플랫 컬러, 심플한 라인
+- Character: MUST be a "White circle-faced stickman"
+- **Body & Limbs: 몸, 팔, 다리 전체가 반드시 순수한 하얀색이어야 함. 검은색 스틱맨 금지.**
+- Face: 심플한 하얀 원형 얼굴에 2D 스타일 표정
+- Style: 2D 애니메이션, 심플한 라인, 선명한 플랫 컬러
 
 [Costume & Role Rule - 과학 의상]
-- 절대 일반적인 사람으로 그리지 말 것. 반드시 분야에 맞는 "코스튬" 지정
+- 절대 일반적인 사람으로 그리지 말 것. 하얀 몸 위에 분야에 맞는 "코스튬" 입히기
 - 과학자: 흰 가운, 보안경 / 의사: 수술복, 청진기
 - 우주비행사: 우주복 / 엔지니어: 작업복, 안전모
 - 로봇공학자: 기술 장갑 / 프로그래머: 캐주얼 후드
@@ -861,12 +864,13 @@ with st.sidebar:
 """,
         "커스텀 (직접 입력)": """
 [Core Identity - 절대 규칙]
-- Character: "White circle-faced stickman" (반드시 하얀 원형 얼굴의 스틱맨)
-- Body: 날씬한 스틱맨 몸체, 하얀 피부, 자연스러운 비율
-- Style: 2D 애니메이션 스타일, 선명한 플랫 컬러, 심플한 라인
+- Character: MUST be a "White circle-faced stickman"
+- **Body & Limbs: 몸, 팔, 다리 전체가 반드시 순수한 하얀색이어야 함. 검은색 스틱맨 금지.**
+- Face: 심플한 하얀 원형 얼굴에 2D 스타일 표정
+- Style: 2D 애니메이션, 심플한 라인, 선명한 플랫 컬러
 
 [Costume & Role Rule - 의상 규칙]
-- 절대 일반적인 사람으로 그리지 말 것. 반드시 역할에 맞는 "코스튬" 지정
+- 절대 일반적인 사람으로 그리지 말 것. 하얀 몸 위에 역할에 맞는 "코스튬" 입히기
 - 각 캐릭터의 직업/역할에 맞는 컬러풀하고 특징적인 의상
 
 [Background & Lighting - 배경/조명]
