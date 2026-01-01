@@ -300,88 +300,84 @@ def make_filename(scene_num, text_chunk):
 # [수정됨] 함수: 프롬프트 생성 (컨셉 기반 통합 버전)
 # ==========================================
 def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, target_language="Korean"):
+    """[수정됨] Gems 공식 + 텍스트 통합 버전"""
     scene_num = index + 1
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TEXT_MODEL_NAME}:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
 
-    # [언어 설정 로직] 선택된 언어에 따라 지침 자동 변경
+    # 1. 언어 설정
     if target_language == "Korean":
-        lang_guide = "화면 속 글씨는 무조건 한글(Korean)로 표기하십시오. (다른 언어 절대 금지)"
-        lang_example = "(예: 'New York' -> '뉴욕', 'Tokyo' -> '도쿄')"
+        lang_guide = "화면 속 핵심 키워드는 무조건 '한글(Korean)'로 표기하십시오."
     elif target_language == "English":
-        lang_guide = "화면 속 글씨는 무조건 영어(English)로 표기하십시오."
-        lang_example = "(예: '서울' -> 'Seoul', '독도' -> 'Dokdo')"
+        lang_guide = "화면 속 핵심 키워드는 무조건 '영어(English)'로 표기하십시오."
     elif target_language == "Japanese":
-        lang_guide = "화면 속 글씨는 무조건 일본어(Japanese)로 표기하십시오."
-        lang_example = "(예: '서울' -> 'ソウル', 'New York' -> 'ニューヨーク')"
+        lang_guide = "화면 속 핵심 키워드는 무조건 '일본어(Japanese)'로 표기하십시오."
     else:
-        lang_guide = f"화면 속 글씨는 무조건 '{target_language}'로 표기하십시오."
-        lang_example = ""
+        lang_guide = f"화면 속 핵심 키워드는 무조건 '{target_language}'로 표기하십시오."
 
+    # 2. [중요] Gems 스타일 강제 고정용 Suffix (영어) - 스틱맨 정체성 확보
+    style_suffix = ", The style is white circle-faced stickman 2D animation with simple lines and flat vivid color planes, emphasizing vivid architectural atmosphere and cinematic lighting."
+
+    # 3. 프롬프트 작성 지침 (Gems 공식 + 텍스트 통합)
     full_instruction = f"""
-[역할]
-당신은 '2D 캐릭터 애니메이션 전문 프롬프트 디렉터'입니다.
+[Role]
+You are a '2D Stickman Animation Prompt Director'.
 
-[전체 영상 주제]
+[Video Title]
 "{video_title}"
 
-[스타일 가이드 - 최우선 준수]
+[Style Guide - MUST FOLLOW]
 {style_instruction}
 
-[프롬프트 작성 공식]
-[카메라 연출(앵글)] + [캐릭터 개성(직업별 의상/컬러) + 구체적 행동] + [장소/시간을 분위기로 녹여냄 + 다채로운 조명] + [고정 문장]
+[Prompt Structure Formula]
+You must write the prompt in **Korean** following this exact order:
 
-[필수 연출 지침]
-1. 무조건 2D 애니메이션 스타일로 그린다
+1. **[Camera Angle & Shot]**: 구체적인 카메라 앵글 지정
+   (예: 로우 앵글 샷, 드론 뷰, 클로즈업, 와이드 샷, 버드아이 뷰)
 
-2. 캐릭터 (일관된 스타일 유지):
-   - 얼굴: 심플한 동그란 하얀색 원형
-   - 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
-   - 피부: 순수한 하얀색
-   - 몸: 날씬한 체형
-   - 팔다리: 몸에 맞는 자연스러운 비율의 하얀색 팔다리
-   - 의상: 직업/역할에 맞는 컬러풀한 의상
+2. **[Character & Costume]**: "White circle-faced stickman"을 반드시 명시하고 구체적인 의상/색상 지정
+   (예: "네이비 정장을 입은 하얀 원형 얼굴의 스틱맨 CEO", "낡은 회색 가디건을 입은 스틱맨")
 
-3. 배경: 2D로 디테일하게 몰입감 있게, 다양한 장소와 상황 연출
-4. 색감: 에메랄드, 보라, 주황, 핑크, 골드 등 다채로운 색상
-5. 하나의 통일된 장면으로 연출
-6. 텍스트: 핵심 키워드 2~3개만 자연스럽게 배치
-7. 텍스트 언어: {lang_guide} {lang_example}
+3. **[Action & Emotion]**: 스틱맨이 무엇을 하고 있는지, 어떤 감정인지 묘사
+   (예: 자신감 넘치는 표정으로 프레젠테이션 중, 절망적인 표정으로 고개를 숙이고 있다)
 
-[임무]
-제공된 대본 조각을 바탕으로, 이미지 생성 AI가 그릴 수 있는 구체적인 묘사 프롬프트를 작성하십시오.
+4. **[Background & Lighting]**: 구체적인 색상과 조명 이름으로 생생하게 묘사
+   (예: "Golden Amber 조명이 비추는 고급 사무실", "Neon Pink와 Cold Blue가 어우러진 도시 야경")
 
-[작성 요구사항]
-- 분량: 최소 5문장 이상으로 상세하게 묘사
-- 포함 요소:
-  - 카메라 앵글 지정
-  - 캐릭터의 의상, 머리카락, 소품 구체적 묘사
-  - 캐릭터의 행동과 감정 표현
-  - 대본에 맞는 배경과 조명 분위기
-  - 시각적 은유 (추상적 내용일 경우)
-  - 핵심 한국어 키워드 2~3개
+5. **[Text Object Integration]**: {lang_guide}
+   대본에서 핵심 키워드 2-3개를 추출하여 장면 속 오브젝트로 배치
+   (예: "'성공'이라는 글자가 네온사인처럼 빛나고 있다", "간판에 '희망'이라고 적혀 있다", "'파멸'이라는 한글이 공중에 홀로그램처럼 떠 있다")
 
-[출력 형식]
-- 순수 텍스트만 출력 (마크다운 강조 **금지**)
-- 무조건 한국어로만 작성
-- 부가 설명 없이 오직 프롬프트 텍스트만 출력
-- 절대 이모티콘 기호 사용 금지 (^_^, >_<, :D, ㅠㅠ 등 금지)
-- 표정은 글로 묘사 (예: 밝은 미소, 놀란 표정, 진지한 얼굴)
+[Output Constraints]
+- 순수 텍스트만 출력 (마크다운 강조 금지)
+- 무조건 한국어로 작성
+- 최소 5문장 이상으로 상세하게 묘사
+- 스토리가 아닌 시각적 묘사로 작성
+- 이모티콘 기호 사용 금지 (^_^, >_<, :D 등 금지)
+
+[Script Segment]
+"{text_chunk}"
+
+[Output]
+Write the prompt now:
 """
 
-    # 공통 실행 로직
     payload = {
-        "contents": [{"parts": [{"text": f"지시사항(Instruction):\n{full_instruction}\n\n대본 내용(Script Segment):\n\"{text_chunk}\"\n\n이미지 프롬프트 결과:"}]}]
+        "contents": [{"parts": [{"text": full_instruction}]}]
     }
 
     try:
         response = requests.post(url, headers=headers, data=json.dumps(payload))
         if response.status_code == 200:
             try:
-                prompt = response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+                # 생성된 한글 프롬프트 + 스타일 고정용 영어 Suffix 결합
+                generated_text = response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+                # 마침표 정리 후 Suffix 붙이기
+                generated_text = generated_text.rstrip('.')
+                final_prompt = f"{generated_text}{style_suffix}"
             except:
-                prompt = text_chunk
-            return (scene_num, prompt)
+                final_prompt = text_chunk
+            return (scene_num, final_prompt)
         elif response.status_code == 429:
             time.sleep(2)
             return (scene_num, f"일러스트 묘사: {text_chunk}")
@@ -799,100 +795,88 @@ with st.sidebar:
     # ==========================================
     # [NEW] 컨셉별 스타일 프리셋 시스템
     # ==========================================
+    # [수정됨] Gems 스타일 + 텍스트 통합 버전
     STYLE_PRESETS = {
         "경제학": """
-무조건 2D 애니메이션 스타일. 심플한 동그란 하얀색 얼굴 캐릭터로 설명이 잘되는 화면 자료 느낌.
+[Core Identity - 절대 규칙]
+- Character: "White circle-faced stickman" (반드시 하얀 원형 얼굴의 스틱맨)
+- Body: 날씬한 스틱맨 몸체, 하얀 피부, 자연스러운 비율
+- Style: 2D 애니메이션 스타일, 선명한 플랫 컬러, 심플한 라인
 
-[캐릭터 - 일관된 스타일]
-- 얼굴: 심플한 동그란 하얀색 원형
-- 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
-- 몸: 날씬한 체형, 하얀색 피부
-- 팔다리: 몸에 맞는 자연스러운 비율의 하얀색 팔다리
-- 의상: 직업에 맞는 컬러풀한 의상
+[Costume & Role Rule - 의상 규칙]
+- 절대 일반적인 사람으로 그리지 말 것. 반드시 역할에 맞는 "코스튬" 지정
+- CEO: 네이비 정장, 빨간 넥타이 / 가난한 사람: 낡은 회색 가디건
+- 직장인: 와이셔츠, 블라우스 / 부자: 금색 액세서리
+- 자영업자: 컬러풀한 앞치마 / 학생: 교복
 
-[경제/비즈니스 의상]
-CEO: 네이비 정장, 빨간 넥타이 / 직장인: 와이셔츠, 블라우스 / 자영업자: 컬러풀한 앞치마 / 학생: 교복
+[Background & Lighting - 배경/조명]
+- 구체적인 조명 이름 사용: "Golden Amber", "Neon Pink", "Cold Blue", "Dramatic Spotlight"
+- 배경은 "Vivid architectural atmosphere" (네온 도시, 무너지는 폐허, 밝은 사무실 등)
 
-[배경]
-2D로 디테일하게 몰입감 있게, 다양한 장소와 상황 연출. 하나의 통일된 장면.
-
-[텍스트]
-핵심 키워드 2~3개만 자연스럽게 배치
-
-[색감]
-에메랄드, 보라, 주황, 핑크, 민트, 골드 등 화려한 색상
-
-[고정 스타일]
-2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), slim white body, naturally proportioned limbs, colorful costumes, detailed 2D background, Korean keywords (2-3).
+[Text Integration - 텍스트 통합 (핵심)]
+- 대본에서 추출한 핵심 한국어 키워드 2-3개를 장면에 자연스럽게 배치
+- 예시: 건물의 네온사인, 공중에 떠있는 홀로그램, 벽에 쓰인 글씨, 간판
+- 텍스트는 읽기 쉽고 배경과 어울리는 스타일로
 """,
         "역사": """
-무조건 2D 애니메이션 스타일. 심플한 동그란 하얀색 얼굴 캐릭터로 역사 설명.
+[Core Identity - 절대 규칙]
+- Character: "White circle-faced stickman" (반드시 하얀 원형 얼굴의 스틱맨)
+- Body: 날씬한 스틱맨 몸체, 하얀 피부, 자연스러운 비율
+- Style: 2D 애니메이션 스타일, 선명한 플랫 컬러, 심플한 라인
 
-[캐릭터 - 일관된 스타일]
-- 얼굴: 심플한 동그란 하얀색 원형
-- 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
-- 몸: 날씬한 체형, 하얀색 피부
-- 팔다리: 몸에 맞는 자연스러운 비율의 하얀색 팔다리
-- 의상: 시대에 맞는 역사적 의상
+[Costume & Role Rule - 역사 의상]
+- 절대 일반적인 사람으로 그리지 말 것. 반드시 시대에 맞는 "코스튬" 지정
+- 조선: 한복, 갓 / 로마: 토가, 갑옷 / 중세: 갑옷, 왕관, 드레스
+- 왕족: 금색 장식, 왕관 / 농민: 소박한 옷 / 전사: 무기와 갑옷
 
-[역사 의상]
-조선: 한복, 갓 / 로마: 토가, 갑옷 / 중세: 갑옷, 왕관, 드레스 / 왕족: 금색 장식
+[Background & Lighting - 배경/조명]
+- 구체적인 조명 이름 사용: "Candlelight Warm", "Royal Gold", "Battle Red", "Dawn Light"
+- 배경은 시대적 분위기 (궁궐, 전쟁터, 고대 도시, 시골 마을 등)
 
-[배경]
-2D로 디테일하게, 시대적 분위기와 역사적 장소 연출. 하나의 통일된 장면.
-
-[텍스트]
-핵심 키워드 2~3개만 자연스럽게 배치
-
-[색감]
-왕실: 골드, 퍼플 / 전쟁: 딥 레드, 실버 / 평화: 에메랄드, 스카이블루
-
-[고정 스타일]
-2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), slim white body, naturally proportioned limbs, era-appropriate costumes, detailed 2D background, Korean keywords (2-3).
+[Text Integration - 텍스트 통합 (핵심)]
+- 대본에서 추출한 핵심 한국어 키워드 2-3개를 장면에 자연스럽게 배치
+- 예시: 깃발에 쓰인 글자, 두루마리 문서, 석비에 새겨진 글, 현수막
+- 텍스트는 시대에 맞는 서체 스타일로
 """,
         "과학": """
-무조건 2D 애니메이션 스타일. 과학/기술 상황을 심플한 동그란 하얀색 얼굴 캐릭터로 설명.
+[Core Identity - 절대 규칙]
+- Character: "White circle-faced stickman" (반드시 하얀 원형 얼굴의 스틱맨)
+- Body: 날씬한 스틱맨 몸체, 하얀 피부, 자연스러운 비율
+- Style: 2D 애니메이션 스타일, 선명한 플랫 컬러, 심플한 라인
 
-[캐릭터 - 일관된 스타일]
-- 얼굴: 심플한 동그란 하얀색 원형
-- 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
-- 몸: 날씬한 체형, 하얀색 피부
-- 팔다리: 몸에 맞는 자연스러운 비율의 하얀색 팔다리
-- 의상: 과학/기술 분야에 맞는 의상
+[Costume & Role Rule - 과학 의상]
+- 절대 일반적인 사람으로 그리지 말 것. 반드시 분야에 맞는 "코스튬" 지정
+- 과학자: 흰 가운, 보안경 / 의사: 수술복, 청진기
+- 우주비행사: 우주복 / 엔지니어: 작업복, 안전모
+- 로봇공학자: 기술 장갑 / 프로그래머: 캐주얼 후드
 
-[과학 의상]
-과학자: 흰 가운, 보안경 / 의사: 수술복, 청진기 / 우주비행사: 우주복 / 엔지니어: 작업복, 안전모
+[Background & Lighting - 배경/조명]
+- 구체적인 조명 이름 사용: "Lab White", "Neon Cyber", "Space Purple", "Hologram Blue"
+- 배경은 과학적 분위기 (실험실, 우주, 데이터센터, 미래 도시 등)
 
-[배경]
-2D로 디테일하게, 과학적 장소와 상황 연출. 하나의 통일된 장면.
-
-[텍스트]
-핵심 키워드 2~3개만 자연스럽게 배치
-
-[색감]
-실험실: 민트, 스카이블루 / 우주: 딥 퍼플, 네온 블루 / 디지털: 사이버 블루, 네온 핑크
-
-[고정 스타일]
-2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), slim white body, naturally proportioned limbs, science/tech costumes, detailed 2D background, Korean keywords (2-3).
+[Text Integration - 텍스트 통합 (핵심)]
+- 대본에서 추출한 핵심 한국어 키워드 2-3개를 장면에 자연스럽게 배치
+- 예시: 홀로그램 디스플레이, 모니터 화면, 공중에 뜬 데이터, 실험 장비 라벨
+- 텍스트는 디지털/미래적 스타일로
 """,
         "커스텀 (직접 입력)": """
-무조건 2D 애니메이션 스타일. 심플한 동그란 하얀색 얼굴 캐릭터로 설명이 잘되는 화면 자료 느낌.
+[Core Identity - 절대 규칙]
+- Character: "White circle-faced stickman" (반드시 하얀 원형 얼굴의 스틱맨)
+- Body: 날씬한 스틱맨 몸체, 하얀 피부, 자연스러운 비율
+- Style: 2D 애니메이션 스타일, 선명한 플랫 컬러, 심플한 라인
 
-[캐릭터 - 일관된 스타일]
-- 얼굴: 심플한 동그란 하얀색 원형
-- 표정: 상황에 맞는 2D 스타일 표정 (과장 없이 자연스럽게)
-- 몸: 날씬한 체형, 하얀색 피부
-- 팔다리: 몸에 맞는 자연스러운 비율의 하얀색 팔다리
-- 의상: 직업/역할에 맞는 컬러풀한 의상
+[Costume & Role Rule - 의상 규칙]
+- 절대 일반적인 사람으로 그리지 말 것. 반드시 역할에 맞는 "코스튬" 지정
+- 각 캐릭터의 직업/역할에 맞는 컬러풀하고 특징적인 의상
 
-[배경]
-2D로 디테일하게 몰입감 있게, 대본에 맞는 상황 연출. 하나의 통일된 장면.
+[Background & Lighting - 배경/조명]
+- 구체적인 조명 이름 사용: "Golden Amber", "Neon Pink", "Cold Blue", "Dramatic Spotlight"
+- 배경은 "Vivid architectural atmosphere" (상황에 맞는 생생한 배경)
 
-[텍스트]
-핵심 키워드 2~3개만 자연스럽게 배치
-
-[고정 스타일]
-2D animation, simple white round circle face, situation-appropriate 2D style expressions (not exaggerated), slim white body, naturally proportioned limbs, colorful costumes, detailed 2D background, Korean keywords (2-3).
+[Text Integration - 텍스트 통합 (핵심)]
+- 대본에서 추출한 핵심 한국어 키워드 2-3개를 장면에 자연스럽게 배치
+- 예시: 네온사인, 간판, 홀로그램, 벽면 글씨, 배너
+- 텍스트는 읽기 쉽고 배경과 어울리는 스타일로
 """
     }
 
