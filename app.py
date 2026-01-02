@@ -282,29 +282,22 @@ def parse_numbered_script(script):
     return scenes
 
 # ==========================================
-# [UPGRADE] 함수: AI 기반 대본 맥락 분할
+# [UPGRADE] 함수: AI 기반 대본 맥락 분할 (글자수 제한 엄격화)
 # ==========================================
-def split_text_automatically(client, full_text, target_chars=200):
+def split_text_automatically(client, full_text, target_chars=390):
     """
     Gemini를 이용해 문맥(Context)을 파악하고,
     시각적 장면 전환이 필요한 지점마다 대본을 분할합니다.
-    (기준은 약 150~200자이지만, 문맥을 최우선으로 고려)
+    각 씬은 반드시 target_chars 이하로 제한됩니다.
     """
     prompt = f"""
-    [Role]
-    You are a professional Video Editor and Storyboard Artist.
-
-    [Task]
-    Split the provided [Script] into multiple "Scenes" for image generation.
-
+    [Role] Video Storyboard Editor
+    [Task] Split the [Script] into multiple "Scenes".
     [Rules]
-    1. **Context First:** Read the entire context. Split the text where the visual scene, topic, or mood changes.
-    2. **Length Guideline:** Aim for each scene to be roughly **{target_chars} characters** (approx. 20-40 seconds).
-       - However, DO NOT break a sentence in the middle.
-       - If a topic is long, split it into logical parts.
-       - If a topic is short but distinct, keep it as a separate scene.
-    3. **Output Format:** Return ONLY a raw JSON list of strings. No markdown, no "```json".
-       - Example: ["First scene text...", "Second scene text...", "Third scene text..."]
+    1. **STRICT LIMIT:** Each scene MUST be under {target_chars} characters.
+    2. **NEVER MERGE:** Even if only 100 characters remain at the end, make it a SEPARATE scene. NEVER create a chunk longer than {target_chars} characters.
+    3. **Context:** Split where the visual topic changes, but prioritize the length limit.
+    4. **Output:** Return ONLY a raw JSON list of strings.
 
     [Script]
     {full_text}
@@ -315,36 +308,50 @@ def split_text_automatically(client, full_text, target_chars=200):
             model=GEMINI_TEXT_MODEL_NAME,
             contents=prompt,
             config=types.GenerateContentConfig(
-                response_mime_type="application/json"  # JSON 강제 출력
+                response_mime_type="application/json"
             )
         )
-
-        # JSON 파싱
         scenes = json.loads(response.text)
-
-        # 만약 리스트가 아니라면(혹시 모를 에러 대비) 강제 리스트 변환
         if isinstance(scenes, list):
             return [s.strip() for s in scenes if s.strip()]
         else:
-            # 구조가 다르면 단순 줄바꿈 분할로 대체 (Fallback)
-            return [s.strip() for s in full_text.split('\n') if s.strip()]
-
+            return split_script_by_time(full_text, chars_per_chunk=target_chars)
     except Exception as e:
         print(f"AI Split Error: {e}")
-        # API 에러 발생 시 기존의 단순 규칙 기반 분할로 대체 (안전장치)
-        import re
-        sentences = re.split(r'(?<=[.?!])\s+', full_text.strip())
-        scenes = []
-        current_chunk = ""
-        for sentence in sentences:
-            if not sentence.strip(): continue
-            if len(current_chunk) + len(sentence) > target_chars:
-                if current_chunk: scenes.append(current_chunk.strip())
-                current_chunk = sentence
-            else:
-                current_chunk += " " + sentence
-        if current_chunk: scenes.append(current_chunk.strip())
-        return scenes
+        return split_script_by_time(full_text, chars_per_chunk=target_chars)
+
+
+# [NEW] 규칙 기반 분할 함수 (남은 글자 합치기 금지, 엄격한 글자수 제한)
+def split_script_by_time(script, chars_per_chunk=390):
+    """
+    문장 단위로 분할하되, 글자수 제한을 엄격히 적용합니다.
+    남은 글자가 아무리 적어도 별도의 씬으로 분리합니다.
+    """
+    sentences = re.split(r'(?<=[.?!])\s+', script.strip())
+    chunks = []
+    current_chunk = ""
+
+    for sentence in sentences:
+        # 문장 하나가 이미 제한을 넘을 경우 강제 분할
+        if len(sentence) > chars_per_chunk:
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            temp_sentence = sentence
+            while len(temp_sentence) > chars_per_chunk:
+                chunks.append(temp_sentence[:chars_per_chunk].strip())
+                temp_sentence = temp_sentence[chars_per_chunk:]
+            current_chunk = temp_sentence
+            continue
+
+        if len(current_chunk) + len(sentence) + 1 <= chars_per_chunk:
+            current_chunk += (" " + sentence if current_chunk else sentence)
+        else:
+            chunks.append(current_chunk.strip())
+            current_chunk = sentence
+
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+    return chunks
 
 def make_filename(scene_num, text_chunk):
     clean_line = text_chunk.replace("\n", " ").strip()
@@ -362,71 +369,68 @@ def make_filename(scene_num, text_chunk):
     return filename
 
 # ==========================================
-# [마스터 업그레이드] 함수: 프롬프트 생성 (풀착장 + 텍스트 가독성 + 정확한 단어)
+# [마스터 업그레이드] 함수: 프롬프트 생성 (화면 분할 금지 강화 + 번호 클렌징)
 # ==========================================
 def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, target_language="Korean"):
-    """[최종 마스터 버전] 2D 셀 셰이딩 + 만화적 눈 표정 + 상하의 착장 + 텍스트 시인성 강화"""
+    """[최종 마스터 버전] 화면 분할 완벽 차단 + 2D 셀 셰이딩 + 만화적 눈 + 풀착장"""
     scene_num = index + 1
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TEXT_MODEL_NAME}:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
 
-    # 1. 언어 설정 (사용자 선택 반영)
-    lang_guide = f"화면 속 모든 텍스트는 반드시 '{target_language}'(으)로만 작성하십시오. 표준어를 사용하고 영어 표기는 절대 금지합니다."
+    lang_guide = f"화면 속 모든 텍스트는 반드시 '{target_language}'(으)로만 작성하십시오."
 
-    # 2. 고정 스타일 접미사 (AI가 항상 지켜야 할 기술적 규칙)
+    # [수정] Suffix에서 단일 장면 강조 및 번호 매기기 금지 명시
     style_suffix = (
         ", **High-quality 2D flat animation style with subtle cell shading**. "
-        "Strictly NO 3D, NO rendering, NO realistic depth. "
+        "Strictly NO 3D, NO rendering. "
         "The white stickman MUST be fully dressed (vibrant colorful shirt and long pants). "
-        "**Character's eyes MUST be expressive cartoon eyes: large white sclera with small black pupils for emotions like surprise**, NOT giant black dots. "
-        "Facial expressions should include eyebrows and a mouth. "
-        "Single unified scene, NO split screens, NO vertical divider lines. "
-        "Text must be in a clean white box or speech bubble with a very thick high-pixel black outline."
+        "**Character's eyes MUST be expressive cartoon eyes: large white sclera with small black pupils**, NOT giant black dots. "
+        "**ONE SINGLE UNIFIED SCENE. DO NOT split the screen. DO NOT use multiple panels or grids. DO NOT use labels like 'Scene 1' or 'Panel 1'.** "
+        "Text must be in a clean box or bubble with a very thick black outline."
     )
 
-    # 3. 프롬프트 작성 지침 (감독으로서의 연출 지시)
     full_instruction = f"""
-[Role]
-당신은 현대적이고 세련된 '2D 셀 애니메이션' 스타일을 추구하는 비주얼 디렉터입니다.
+[Role] 2D 애니메이션 비주얼 디렉터
 
 [Style Guide]
 {style_instruction}
 
-[Visual Task: 핵심 연출 수칙]
-1. **눈 모양 (IMPORTANT):**
-   - 놀람이나 당황을 표현할 때 거대한 검은색 점눈(Dot eyes)을 그리지 마십시오.
-   - **'하얀 눈자위(흰자) 안에 작은 검은색 눈동자'**가 있는 만화적 눈으로 표현하십시오.
-   - 상황에 맞게 땀방울이나 눈썹의 각도를 조절하여 생동감을 주십시오.
-2. **셰이딩과 디테일:**
-   - 캐릭터의 얼굴과 유색 의상에 **살짝의 2D 그림자(Cell Shading) 효과**를 넣어 깊이감을 주되, 3D 렌더링처럼 보이지 않게 하십시오.
-3. **풀착장 의상:** 하얀색 스틱맨은 반드시 상의(셔츠/자켓)와 하의(긴 바지)를 모두 입고 있어야 합니다.
-4. **텍스트 시인성:** {lang_guide}
-   - 글자는 배경과 겹치지 않게 하얀색 박스나 말풍선 안에 넣고, **두꺼운 검정 외곽선**을 둘러 가독성을 극대화하십시오.
-5. **단일 화면 구도:** 대본 맥락에 따라 와이드/미디엄/클로즈업을 선택하되, 화면 분할(Split screen)은 절대 금지합니다.
+[Mission]
+제공된 대본 조각을 바탕으로 **'단 하나의 통합된 장면'**을 위한 묘사 프롬프트를 작성하십시오.
 
-[경제 상황 연출]
-- '몰락'이나 '가격 상승' 같은 주제도 밝은 조명(High-key) 아래에서 묘사하십시오. 어두운 배경 대신 '표정의 변화', '부서지는 사물', '하락하는 빨간 그래프' 등을 활용하십시오.
+[절대 규칙 - 화면 분할 금지]
+1. **단일 구도:** 절대로 화면을 좌우나 위아래로 나누지 마십시오. (NO Split screen, NO multi-panels)
+2. **번호 매기기 금지:** 프롬프트 안에 '장면 1', '장면 2' 또는 'SCENE 1' 같은 번호를 절대 적지 마십시오. 이미지 모델이 이를 보고 화면을 칸만화처럼 나눕니다.
+3. **통합 묘사:** 대본의 여러 상황을 하나의 완성된 풍경 안에 자연스럽게 배치하십시오.
 
-[영상 주제] "{video_title}"
-[대본 조각] "{text_chunk}"
+[캐릭터 및 텍스트]
+- **눈 모양:** 놀람/당황 시 '커다란 하얀 눈자위 안에 작은 검은색 눈동자'를 그리십시오. (점눈 절대 금지)
+- **의상:** 상의와 하의(긴 바지)를 모두 입은 컬러풀한 복장의 스틱맨.
+- **셰이딩:** 캐릭터와 옷에 옅은 2D 셀 셰이딩(그림자) 효과 적용.
+- **텍스트:** {lang_guide} (말풍선이나 박스 안에 배치, 두꺼운 외곽선 필수)
 
-[Output 형식]
-- **오직 이미지 생성용 한국어 프롬프트만** 출력하십시오. (3D, 렌더링, 점눈 등의 단어는 포함하지 마십시오)
+[경제학적 연출]
+- '몰락'이나 '가격 상승' 테마라도 밝은 조명을 유지하고, 깨진 상징물이나 하락 그래프 등으로 상황을 표현하십시오.
+
+[대본 조각]
+"{text_chunk}"
+
+[Output]
+- **번호나 제목 없이**, 오직 이미지 생성용 한국어 묘사 문단 하나만 출력하십시오.
 """
 
-    payload = {
-        "contents": [{"parts": [{"text": full_instruction}]}]
-    }
+    payload = {"contents": [{"parts": [{"text": full_instruction}]}]}
 
     try:
         response = requests.post(url, headers=headers, data=json.dumps(payload))
         if response.status_code == 200:
             try:
                 generated_text = response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
-                # 3D 렌더링 및 큰 점눈 느낌을 줄 수 있는 단어는 마지막에 한 번 더 필터링
-                forbidden = ["3D 렌더링", "3차원", "입체적인", "거대한 점눈", "dot eyes"]
-                for word in forbidden:
-                    generated_text = generated_text.replace(word, "디테일한 2D 셀 애니메이션")
+                # [추가] 혹시 AI가 ### SCENE 등을 넣었을 경우를 대비한 클렌징
+                generated_text = re.sub(r'#+\s*SCENE\s*\d+', '', generated_text, flags=re.IGNORECASE)
+                generated_text = re.sub(r'장면\s*\d+', '', generated_text)
+                generated_text = re.sub(r'씬\s*\d+', '', generated_text)
+                generated_text = re.sub(r'Scene\s*\d+', '', generated_text, flags=re.IGNORECASE)
 
                 final_prompt = f"{generated_text.rstrip('.')}{style_suffix}"
             except:
@@ -1190,11 +1194,11 @@ with col_input_opt:
     st.info("⏱️ 씬 분할 설정")
     scene_duration = st.slider(
         "한 씬당 목표 글자수",
-        min_value=200,
-        max_value=600,
-        value=400,
+        min_value=100,
+        max_value=500,
+        value=390,
         step=10,
-        help="공백 포함 약 400자 = 약 60초 분량. AI가 문맥을 파악하여 이 길이 근처에서 씬을 나눕니다."
+        help="각 씬은 반드시 이 글자수 이하로 엄격히 분할됩니다."
     )
     st.caption(f"약 {scene_duration}자 ≈ {scene_duration // 6}초 분량")
 
