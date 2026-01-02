@@ -315,10 +315,10 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
     else:
         lang_guide = f"화면 속 핵심 키워드는 무조건 '{target_language}'로 표기하십시오."
 
-    # 2. [중요] Suffix - 장면 구성, 배경, 텍스트의 상황 인식 다양성 강조 + 깔끔한 테두리
-    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, simple lines, and flat vivid colors. **All text has a clean and distinct outline for readability.**"
+    # 2. [중요] Suffix - 밝은 조명 + 텍스트 2-3개 제한 강조
+    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, simple lines, and flat vivid colors. **Lighting is bright and clear. Text is limited to 2-3 core keywords with distinct outlines.**"
 
-    # 3. 프롬프트 작성 지침 (Gems 공식 + 상황별 배경/엑스트라/텍스트 가이드)
+    # 3. 프롬프트 작성 지침 (Gems 공식 + 밝은 조명 + 키워드 제한)
     full_instruction = f"""
 [Role]
 You are a '2D Stickman Animation Prompt Director'.
@@ -329,37 +329,37 @@ You are a '2D Stickman Animation Prompt Director'.
 [Style Guide]
 {style_instruction}
 
-[GUIDE: Context-Aware Visual Guide (Crucial)]
-Analyze the script's scenario and apply the corresponding visual elements:
+[GUIDE: Lighting & Text Constraint]
+1. **Lighting Rule:** Make the scene **BRIGHT and VISIBLE**.
+   - Avoid "Darkness" or "Pitch Black Night" unless absolutely necessary.
+   - Even for sad scenes, use "Grey cloudy day" or "Dim room with visible details" instead of pitch black.
+   - Use keywords: "Bright Daylight", "Soft Studio Light", "Clean White Background", "Warm Golden Light".
 
-1. **Scenario: Business/Partnership (e.g., M&A, Deals, Handshakes)**
-   - **Background:** Bright conference room, stage with handshake, modern office with glass windows.
-   - **Extras:** A few other stickmen (reporters with microphones, investors in suits) in the background.
-   - **Text Integration:** Place text on **podiums**, **company flags**, **shirt labels (name tags)**, or **large presentation screens**.
+2. **Text Constraint:** Select **EXACTLY 2 or 3** most important keywords from the script.
+   - Do NOT write full sentences.
+   - Do NOT add too many labels. Just the core concepts.
+   - Text must have a **CLEAN OUTLINE** for readability.
 
-2. **Scenario: Economic Crisis/Failure (e.g., Collapse, Despair, Bankruptcy)**
-   - **Background:** Dark, crumbling city ruins, stormy alley, broken office with scattered papers.
-   - **Extras:** Usually solo, or with a few shadowy, sad stickmen figures in the distance.
-   - **Text Integration:** Place text on **broken neon signs**, **cracked walls**, **graffiti**, or **scattered papers on the ground**.
+[Context-Aware Visual Guide (Crucial)]
+1. **Scenario: Business/Partnership**
+   - **Background:** Bright conference room, sunny stage with handshake, modern office.
+   - **Extras:** A few other stickmen (reporters, investors) in the background.
+   - **Text Integration:** Place text on **podiums**, **company flags**, **shirt labels**, or **presentation screens**.
 
-3. **Scenario: Market/Public Reaction (e.g., Trends, Opinions, Protests)**
-   - **Background:** Public spaces like busy streets, stock market trading floors, or online community screens.
-   - **Extras:** **Crowd of anonymous stickmen** showing reactions (angry faces, confused expressions, cheering poses).
-   - **Text Integration:** Text on **protest signs held by crowd**, **thought bubbles above crowds**, **stock ticker boards**.
+2. **Scenario: Economic Crisis/Failure**
+   - **Background:** Grey cloudy city, dim office (NOT pitch black), rainy street with visible sky.
+   - **Extras:** Usually solo, or with a few sad figures in the distance.
+   - **Text Integration:** Place text on **broken neon signs**, **cracked walls**, **graffiti**.
 
-4. **Scenario: News/Announcement (e.g., Breaking News, Reports)**
-   - **Background:** Cozy living room with TV, or a professional news studio desk.
+3. **Scenario: Market/Public Reaction**
+   - **Background:** Bright public spaces, busy streets, stock market floors.
+   - **Extras:** **Crowd of anonymous stickmen** showing reactions.
+   - **Text Integration:** Text on **protest signs**, **thought bubbles**, **stock ticker boards**.
+
+4. **Scenario: News/Announcement**
+   - **Background:** Bright living room with TV, or well-lit news studio desk.
    - **Extras:** None (focus on TV) or a news anchor stickman at desk.
-   - **Text Integration:** Text inside a **"Breaking News" banner on a TV screen**, or on **news ticker at bottom**.
-
-[GUIDE: How to Create Readable & Sleek Text]
-When describing glowing text or neon signs, add a description of its **OUTLINE**.
-**Avoid making the outline too thick.** Keep it **clean and sharp**.
-
-- ❌ "A neon sign with a huge thick border." (Too clunky)
-- ✅ "A glowing neon sign with a **clean black outline**." (Perfect)
-- ✅ "Text '성공' written in **distinct, bordered neon letters**."
-- ✅ "A hologram text with a **sharp glowing border**."
+   - **Text Integration:** Text inside a **"Breaking News" banner on a TV screen**.
 
 [CRITICAL RULE - POSE & FACE DETAILS]
 1. **If the character is sitting:** Describe the limbs specifically. (e.g., "Sitting with knees bent", "Arms resting on knees").
@@ -370,11 +370,11 @@ When describing glowing text or neon signs, add a description of its **OUTLINE**
 Write the prompt in **Korean** in this order:
 
 1. **[Camera Angle & Shot]**: "와이드 샷" (군중/대규모 장소) 또는 "미디엄 샷" (개인/감정 장면)
-2. **[Setting the Scene - Background & Context]**: **대본에 맞는 구체적인 배경 묘사 (밝은 회의실, 어두운 폐허, 북적이는 거리 등)**
+2. **[Setting the Scene - Background & Context]**: **대본에 맞는 구체적인 배경 묘사. 반드시 밝게! (밝은 회의실, 회색 흐린 하늘, 밝은 거리 등)**
 3. **[Main Character(s) & Action]**: "하얀 원형 얼굴의 스틱맨" + 행동, 의상, **눈**과 **입** 묘사, 필요시 **옷에 이름표** 묘사
-4. **[Extras/Crowd Composition]**: **(핵심)** 배경의 엑스트라 스틱맨들 묘사 (기자들, 분노한 군중, 슬픈 그림자 인물 등) - 없으면 "없음"
-5. **[Text Object Integration]**: {lang_guide} **핵심: 텍스트가 어떤 물체 위에 있는지 + 'CLEAN OUTLINE' 또는 'SHARP BORDER' 명시**. 키워드 2-3개 선택
-6. **[Lighting & Mood]**: "Golden Amber", "Dark Stormy", "Clean White", "Neon Glow" 등 분위기에 맞는 조명
+4. **[Extras/Crowd Composition]**: 배경의 엑스트라 스틱맨들 묘사 (기자들, 군중, 그림자 인물 등) - 없으면 "없음"
+5. **[Text Object Integration]**: {lang_guide} **딱 2-3개 핵심 키워드만 선택! + 텍스트가 어떤 물체 위에 있는지 + 'CLEAN OUTLINE' 명시**
+6. **[Lighting & Color]**: "Bright White", "Golden Amber", "Soft Blue", "Grey Cloudy" 등 **무조건 밝게!**
 
 [Constraint]
 - 순수 텍스트만 출력 (마크다운 금지)
@@ -828,17 +828,23 @@ with st.sidebar:
 - Face Style: Minimalist white round head with eyes and mouth.
 - **Critical Rule:** Character MUST have EYES and MOUTH.
 
-[Context-Aware Visual Guide (Crucial)]
-Analyze the script's scenario and apply the corresponding visual elements:
+[Lighting & Background Guide - BRIGHT & CLEAR]
+- **General Tone:** ALWAYS use **Bright, Clear, and Visible** lighting.
+- **Avoid:** Pitch black darkness, heavy shadows, or muddy colors.
+- **Scenario Lighting:**
+    - *Success/Business:* "Bright White Studio", "Sunny Day", "Warm Golden Light".
+    - *Crisis/Sadness:* "Grey Cloudy Daylight", "Dim Indoor Light" (NOT pitch black), "Cold Blue Tint" (keep it bright enough to see).
+    - *News:* "Bright TV Studio Lighting".
 
+[Context-Aware Visual Guide (Crucial)]
 1. **Scenario: Business/Partnership (e.g., M&A, Deals)**
    - **Background:** Bright conference room, stage with handshake, modern office.
    - **Extras:** A few other stickmen (reporters, investors) in the background.
    - **Text Integration:** Place text on **podiums**, **company flags**, **shirt labels**, or **large presentation screens**.
 
 2. **Scenario: Economic Crisis/Failure (e.g., Collapse, Despair)**
-   - **Background:** Dark, crumbling city ruins, stormy alley, broken offices.
-   - **Extras:** Usually solo, or with a few shadowy, sad figures in the distance.
+   - **Background:** Grey cloudy city, dim office, rainy street (NOT pitch black).
+   - **Extras:** Usually solo, or with a few sad figures in the distance.
    - **Text Integration:** Place text on **broken neon signs**, **cracked walls**, **graffiti**, or **scattered papers**.
 
 3. **Scenario: Market/Public Reaction (e.g., Trends, Opinions)**
@@ -847,17 +853,14 @@ Analyze the script's scenario and apply the corresponding visual elements:
    - **Text Integration:** Text on **protest signs**, **thought bubbles above crowds**, **stock ticker boards**.
 
 4. **Scenario: News/Announcement**
-   - **Background:** Cozy living room with TV, or a news studio desk.
+   - **Background:** Cozy living room with TV, or a bright news studio desk.
    - **Extras:** None (focus on TV) or a news anchor.
    - **Text Integration:** Text inside a **"Breaking News" banner on a TV screen**.
 
-[Text Object Integration (Readable & Aesthetic)]
-- **CRITICAL TEXT RULE:** All neon signs or glowing text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
-- **Avoid making the outline too thick or clunky.** Keep it sleek.
-- **How to describe Neon Text:**
-    - "A glowing neon sign with a **clean black outline**."
-    - "Text written in **distinct, bordered neon letters**."
-    - "A **glowing outline text** floating in the air."
+[Text Object Integration (Limit 2-3 Keywords)]
+- **QUANTITY RULE:** Strictly limit text to **2-3 CORE KEYWORDS** per scene. Do not use long sentences or too many tags.
+- **Readability:** Text must have a **CLEAN OUTLINE**.
+- **Placement:** Text on TV Screen, Presentation Slide, Labels on Shirt, Neon Sign with clean border.
 
 [Costume & Role]
 - CEO: 네이비 정장, 빨간 넥타이 / 가난한 사람: 낡은 회색 가디건
@@ -872,35 +875,39 @@ Analyze the script's scenario and apply the corresponding visual elements:
 - Face Style: Minimalist white round head with eyes and mouth.
 - **Critical Rule:** Character MUST have EYES and MOUTH.
 
-[Context-Aware Visual Guide (Crucial)]
-Analyze the script's scenario and apply the corresponding visual elements:
+[Lighting & Background Guide - BRIGHT & CLEAR]
+- **General Tone:** ALWAYS use **Bright, Clear, and Visible** lighting.
+- **Avoid:** Pitch black darkness, heavy shadows, or muddy colors.
+- **Scenario Lighting:**
+    - *Victory/Coronation:* "Bright Golden Sunlight", "Warm Throne Room Light".
+    - *Battle/War:* "Smoky but Visible Daylight", "Orange Firelight" (NOT pitch black).
+    - *Tragedy:* "Grey Cloudy Sky", "Dim Candlelight" (keep it bright enough to see).
 
+[Context-Aware Visual Guide (Crucial)]
 1. **Scenario: War/Battle**
-   - **Background:** Burning battlefield, siege walls, army camps.
+   - **Background:** Smoky battlefield with visible sky, siege walls, army camps.
    - **Extras:** **Army of stickmen soldiers** in the background, fallen warriors.
    - **Text Integration:** Text on **war flags**, **shield emblems**, **banners**.
 
 2. **Scenario: Royal/Palace**
-   - **Background:** Throne room with golden decorations, royal garden.
+   - **Background:** Bright throne room with golden decorations, sunny royal garden.
    - **Extras:** Servants, guards, nobles in the background.
    - **Text Integration:** Text on **royal seals**, **scrolls**, **throne inscriptions**.
 
 3. **Scenario: Revolution/Uprising**
-   - **Background:** Town square, burning buildings, palace gates.
+   - **Background:** Town square at dusk (visible), palace gates with torchlight.
    - **Extras:** **Angry crowd of stickmen** with torches and pitchforks.
    - **Text Integration:** Text on **protest banners**, **wanted posters**, **graffiti on walls**.
 
 4. **Scenario: Historical Event/Moment**
-   - **Background:** Iconic historical setting (e.g., signing ceremony, coronation).
+   - **Background:** Iconic historical setting with clear lighting (signing ceremony, coronation).
    - **Extras:** Witnesses, historians, important figures.
    - **Text Integration:** Text on **documents**, **stone tablets**, **flags**.
 
-[Text Object Integration (Readable & Aesthetic)]
-- **CRITICAL TEXT RULE:** All text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
-- **Avoid making the outline too thick or clunky.** Keep it sleek.
-- **How to describe Text:**
-    - "A banner with **clean bordered text**."
-    - "Text carved on stone with **distinct, sharp edges**."
+[Text Object Integration (Limit 2-3 Keywords)]
+- **QUANTITY RULE:** Strictly limit text to **2-3 CORE KEYWORDS** per scene. Do not use long sentences or too many tags.
+- **Readability:** Text must have a **CLEAN OUTLINE**.
+- **Placement:** Text on Banners, Royal Seals, Stone Tablets, War Flags.
 
 [Costume & Role - 역사 의상]
 - 조선: 한복, 갓 / 로마: 토가, 갑옷 / 중세: 갑옷, 왕관, 드레스
@@ -915,35 +922,39 @@ Analyze the script's scenario and apply the corresponding visual elements:
 - Face Style: Minimalist white round head with eyes and mouth.
 - **Critical Rule:** Character MUST have EYES and MOUTH.
 
-[Context-Aware Visual Guide (Crucial)]
-Analyze the script's scenario and apply the corresponding visual elements:
+[Lighting & Background Guide - BRIGHT & CLEAR]
+- **General Tone:** ALWAYS use **Bright, Clear, and Visible** lighting.
+- **Avoid:** Pitch black darkness, heavy shadows, or muddy colors.
+- **Scenario Lighting:**
+    - *Lab/Research:* "Bright White Lab Lighting", "Clean Fluorescent Light".
+    - *Space:* "Starry but Visible Space", "Bright Spaceship Interior" (NOT pitch black void).
+    - *Disaster:* "Red Warning Lights with Visible Background", "Smoky but Lit Lab".
 
+[Context-Aware Visual Guide (Crucial)]
 1. **Scenario: Discovery/Breakthrough**
-   - **Background:** Clean laboratory, research facility, eureka moment setting.
+   - **Background:** Bright clean laboratory, research facility, eureka moment setting.
    - **Extras:** Research team stickmen celebrating or observing.
    - **Text Integration:** Text on **computer monitors**, **hologram displays**, **scientific charts**.
 
 2. **Scenario: Space/Exploration**
-   - **Background:** Starry cosmos, spaceship interior, alien planet surface.
+   - **Background:** Starry cosmos with visible elements, bright spaceship interior, alien planet with clear sky.
    - **Extras:** Astronaut crew, mission control stickmen on screens.
    - **Text Integration:** Text on **spaceship consoles**, **mission patches**, **floating HUD**.
 
 3. **Scenario: Disaster/Failure**
-   - **Background:** Exploding lab, malfunctioning equipment, warning lights.
+   - **Background:** Lab with warning lights (visible), malfunctioning equipment, smoky but lit scene.
    - **Extras:** Panicking scientists, evacuation scenes.
    - **Text Integration:** Text on **warning signs**, **error screens**, **scattered papers**.
 
 4. **Scenario: Future/Technology**
-   - **Background:** Futuristic city, cyber world, high-tech facility.
+   - **Background:** Bright futuristic city, glowing cyber world, well-lit high-tech facility.
    - **Extras:** Robots, AI interfaces, holographic beings.
    - **Text Integration:** Text as **hologram UI**, **laser projections**, **digital billboards**.
 
-[Text Object Integration (Readable & Aesthetic)]
-- **CRITICAL TEXT RULE:** All hologram or glowing text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
-- **Avoid making the outline too thick or clunky.** Keep it sleek.
-- **How to describe Text:**
-    - "A hologram text with a **sharp glowing border**."
-    - "Digital display with **clean, distinct letters**."
+[Text Object Integration (Limit 2-3 Keywords)]
+- **QUANTITY RULE:** Strictly limit text to **2-3 CORE KEYWORDS** per scene. Do not use long sentences or too many tags.
+- **Readability:** Text must have a **CLEAN OUTLINE**.
+- **Placement:** Text on Computer Monitors, Hologram UI, Digital Billboards, Warning Signs.
 
 [Costume & Role - 과학 의상]
 - 과학자: 흰 가운, 보안경 / 의사: 수술복, 청진기
@@ -958,35 +969,39 @@ Analyze the script's scenario and apply the corresponding visual elements:
 - Face Style: Minimalist white round head with eyes and mouth.
 - **Critical Rule:** Character MUST have EYES and MOUTH.
 
-[Context-Aware Visual Guide (Crucial)]
-Analyze the script's scenario and apply the corresponding visual elements:
+[Lighting & Background Guide - BRIGHT & CLEAR]
+- **General Tone:** ALWAYS use **Bright, Clear, and Visible** lighting.
+- **Avoid:** Pitch black darkness, heavy shadows, or muddy colors.
+- **Scenario Lighting:**
+    - *Positive/Success:* "Bright White Studio", "Sunny Day", "Warm Golden Light".
+    - *Negative/Sad:* "Grey Cloudy Daylight", "Dim Indoor Light" (NOT pitch black).
+    - *News:* "Bright TV Studio Lighting".
 
+[Context-Aware Visual Guide (Crucial)]
 1. **Scenario: Business/Partnership**
-   - **Background:** Conference room, stage, modern office.
+   - **Background:** Bright conference room, stage, modern office.
    - **Extras:** Other stickmen (reporters, investors) in the background.
    - **Text Integration:** Text on **podiums**, **flags**, **shirt labels**, **screens**.
 
 2. **Scenario: Crisis/Failure**
-   - **Background:** Dark ruins, stormy alley, broken offices.
-   - **Extras:** Solo, or with shadowy figures in the distance.
+   - **Background:** Grey cloudy scene, dim office, rainy street (NOT pitch black).
+   - **Extras:** Solo, or with sad figures in the distance.
    - **Text Integration:** Text on **broken signs**, **cracked walls**, **graffiti**.
 
 3. **Scenario: Public Reaction**
-   - **Background:** Public spaces, streets, gathering places.
+   - **Background:** Bright public spaces, streets, gathering places.
    - **Extras:** **Crowd of stickmen** showing reactions.
    - **Text Integration:** Text on **signs**, **thought bubbles**, **ticker boards**.
 
 4. **Scenario: News/Announcement**
-   - **Background:** Living room with TV, or news studio.
+   - **Background:** Bright living room with TV, or well-lit news studio.
    - **Extras:** None or news anchor.
    - **Text Integration:** Text on **TV screen banner**.
 
-[Text Object Integration (Readable & Aesthetic)]
-- **CRITICAL TEXT RULE:** All neon signs or glowing text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
-- **Avoid making the outline too thick or clunky.** Keep it sleek.
-- **How to describe Text:**
-    - "A glowing neon sign with a **clean black outline**."
-    - "Text written in **distinct, bordered letters**."
+[Text Object Integration (Limit 2-3 Keywords)]
+- **QUANTITY RULE:** Strictly limit text to **2-3 CORE KEYWORDS** per scene. Do not use long sentences or too many tags.
+- **Readability:** Text must have a **CLEAN OUTLINE**.
+- **Placement:** Text on TV Screen, Signs, Banners, Shirt Labels.
 
 [Costume & Role]
 - 각 캐릭터의 직업/역할에 맞는 컬러풀하고 특징적인 의상
