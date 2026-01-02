@@ -365,48 +365,53 @@ def make_filename(scene_num, text_chunk):
 # [마스터 업그레이드] 함수: 프롬프트 생성 (풀착장 + 텍스트 가독성 + 정확한 단어)
 # ==========================================
 def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, target_language="Korean"):
-    """[마스터 업그레이드] 풀착장 캐릭터 + 텍스트 가독성 극대화 + 정확한 단어 사용"""
+    """[최종 마스터 버전] 2D 셀 셰이딩 + 만화적 눈 표정 + 상하의 착장 + 텍스트 시인성 강화"""
     scene_num = index + 1
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TEXT_MODEL_NAME}:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
 
-    # 1. 언어 설정
-    lang_guide = f"화면 속 모든 텍스트는 반드시 '{target_language}'(으)로만 작성하십시오. 영어 발음을 그대로 옮긴 단어(예: JJANGMYEON)는 절대 사용하지 말고, 해당 언어의 표준 단어(예: 짜장면)를 사용하십시오."
+    # 1. 언어 설정 (사용자 선택 반영)
+    lang_guide = f"화면 속 모든 텍스트는 반드시 '{target_language}'(으)로만 작성하십시오. 표준어를 사용하고 영어 표기는 절대 금지합니다."
 
-    # 2. 고정 스타일 접미사 (상하의 의상 + 텍스트 외곽선)
-    # [변경] 의상은 상의(Top)와 하의(Pants)를 모두 명시, 텍스트는 배경과 분리된 박스나 두꺼운 테두리 강조
+    # 2. 고정 스타일 접미사 (AI가 항상 지켜야 할 기술적 규칙)
     style_suffix = (
-        ", 2D flat animation style. The white stickman MUST be fully dressed, "
-        "**wearing both a colorful top (shirt/suit) and long pants (trousers)**. "
-        "Single unified scene, NO split screens. "
-        "**Text must be placed inside a high-contrast speech bubble or on a clear signboard with a thick black outline** "
-        "to ensure it is not buried by the background. High-key studio lighting, vivid colors."
+        ", **High-quality 2D flat animation style with subtle cell shading**. "
+        "Strictly NO 3D, NO rendering, NO realistic depth. "
+        "The white stickman MUST be fully dressed (vibrant colorful shirt and long pants). "
+        "**Character's eyes MUST be expressive cartoon eyes: large white sclera with small black pupils for emotions like surprise**, NOT giant black dots. "
+        "Facial expressions should include eyebrows and a mouth. "
+        "Single unified scene, NO split screens, NO vertical divider lines. "
+        "Text must be in a clean white box or speech bubble with a very thick high-pixel black outline."
     )
 
-    # 3. 프롬프트 지침 (정확성 + 구도 + 의상)
+    # 3. 프롬프트 작성 지침 (감독으로서의 연출 지시)
     full_instruction = f"""
 [Role]
-당신은 시각적 가독성과 캐릭터의 완성도를 중시하는 '인포그래픽 전문 감독'입니다.
+당신은 현대적이고 세련된 '2D 셀 애니메이션' 스타일을 추구하는 비주얼 디렉터입니다.
 
 [Style Guide]
 {style_instruction}
 
-[Visual Task: 핵심 수칙]
-1. **정확한 단어 사용:** 대본의 맥락을 파악하여 '{target_language}' 표준 단어만 사용하십시오. 존재하지 않는 조합어(예: 충국집)나 영문 표기(예: JJANGMYEON)를 절대 금지합니다. 중국집은 '중식당' 혹은 '중국집'으로 정확히 표기하십시오.
-2. **캐릭터 의상 (Full Outfit):** 하얀 스틱맨은 반드시 **상의(셔츠/자켓)와 하의(바지)**를 모두 입고 있어야 합니다. 맨몸에 넥타이만 매거나 상의만 입는 연출을 엄격히 금지합니다. 의상은 배경과 대비되는 선명한 유색(컬러)이어야 합니다.
-3. **텍스트 시인성 (Text Readability):** {lang_guide}
-   - 텍스트는 배경 이미지와 직접 겹치지 않도록 **'깨끗한 말풍선'**이나 **'별도의 전광판/표지판'** 안에 배치하십시오.
-   - 글자의 외곽선(Outline) 픽셀을 매우 높여 배경과 확실히 분리되게 하십시오.
-4. **구도의 다양화:** 대본을 분석하여 '와이드/미디엄/클로즈업' 중 최적의 구도를 스스로 선택하십시오. 단, 화면 분할(Split screen)은 하지 마십시오.
+[Visual Task: 핵심 연출 수칙]
+1. **눈 모양 (IMPORTANT):**
+   - 놀람이나 당황을 표현할 때 거대한 검은색 점눈(Dot eyes)을 그리지 마십시오.
+   - **'하얀 눈자위(흰자) 안에 작은 검은색 눈동자'**가 있는 만화적 눈으로 표현하십시오.
+   - 상황에 맞게 땀방울이나 눈썹의 각도를 조절하여 생동감을 주십시오.
+2. **셰이딩과 디테일:**
+   - 캐릭터의 얼굴과 유색 의상에 **살짝의 2D 그림자(Cell Shading) 효과**를 넣어 깊이감을 주되, 3D 렌더링처럼 보이지 않게 하십시오.
+3. **풀착장 의상:** 하얀색 스틱맨은 반드시 상의(셔츠/자켓)와 하의(긴 바지)를 모두 입고 있어야 합니다.
+4. **텍스트 시인성:** {lang_guide}
+   - 글자는 배경과 겹치지 않게 하얀색 박스나 말풍선 안에 넣고, **두꺼운 검정 외곽선**을 둘러 가독성을 극대화하십시오.
+5. **단일 화면 구도:** 대본 맥락에 따라 와이드/미디엄/클로즈업을 선택하되, 화면 분할(Split screen)은 절대 금지합니다.
 
-[경제적 상황 연출]
-- 가격 상승이나 위기 상황을 그릴 때 '어둠'을 쓰지 마십시오. 대신 '밝은 조명 아래 땀을 흘리는 캐릭터', '부서지는 황금색 사물', '우상향하는 빨간색 화살표' 등을 활용하십시오.
+[경제 상황 연출]
+- '몰락'이나 '가격 상승' 같은 주제도 밝은 조명(High-key) 아래에서 묘사하십시오. 어두운 배경 대신 '표정의 변화', '부서지는 사물', '하락하는 빨간 그래프' 등을 활용하십시오.
 
 [영상 주제] "{video_title}"
 [대본 조각] "{text_chunk}"
 
 [Output 형식]
-- 구도 설명이나 잡담 없이 **이미지 생성용 한국어 프롬프트만** 출력하십시오.
+- **오직 이미지 생성용 한국어 프롬프트만** 출력하십시오. (3D, 렌더링, 점눈 등의 단어는 포함하지 마십시오)
 """
 
     payload = {
@@ -418,7 +423,11 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
         if response.status_code == 200:
             try:
                 generated_text = response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
-                # 마침표 정리 후 고정 스타일 Suffix 결합
+                # 3D 렌더링 및 큰 점눈 느낌을 줄 수 있는 단어는 마지막에 한 번 더 필터링
+                forbidden = ["3D 렌더링", "3차원", "입체적인", "거대한 점눈", "dot eyes"]
+                for word in forbidden:
+                    generated_text = generated_text.replace(word, "디테일한 2D 셀 애니메이션")
+
                 final_prompt = f"{generated_text.rstrip('.')}{style_suffix}"
             except:
                 final_prompt = text_chunk + style_suffix
@@ -1181,11 +1190,11 @@ with col_input_opt:
     st.info("⏱️ 씬 분할 설정")
     scene_duration = st.slider(
         "한 씬당 목표 글자수",
-        min_value=150,
-        max_value=350,
-        value=227,
+        min_value=200,
+        max_value=600,
+        value=400,
         step=10,
-        help="공백 포함 약 227자(375byte) = 약 35초 분량. AI가 문맥을 파악하여 이 길이 근처에서 씬을 나눕니다."
+        help="공백 포함 약 400자 = 약 60초 분량. AI가 문맥을 파악하여 이 길이 근처에서 씬을 나눕니다."
     )
     st.caption(f"약 {scene_duration}자 ≈ {scene_duration // 6}초 분량")
 
