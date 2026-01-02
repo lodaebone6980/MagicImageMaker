@@ -300,7 +300,7 @@ def make_filename(scene_num, text_chunk):
 # [수정됨] 함수: 프롬프트 생성 (컨셉 기반 통합 버전)
 # ==========================================
 def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, target_language="Korean"):
-    """[수정됨] Gems 공식 + 텍스트 통합 + 디테일 강화 버전"""
+    """[수정됨] Gems 공식 + 웹툰 스타일 표정 가이드 버전"""
     scene_num = index + 1
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TEXT_MODEL_NAME}:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
@@ -315,10 +315,10 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
     else:
         lang_guide = f"화면 속 핵심 키워드는 무조건 '{target_language}'로 표기하십시오."
 
-    # 2. [중요] Gems 스타일 강제 고정용 Suffix (영어) - 스틱맨 정체성 + 하얀 몸/팔다리 + 얼굴 명확히
-    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, rendered with simple lines and flat vivid color planes. **Face must be clearly visible.**"
+    # 2. [중요] Suffix - 깔끔하고 귀여운 스타일 강조
+    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, simple lines, and flat vivid colors. **Face features are minimalist, cute, and iconic with simple black dot eyes.**"
 
-    # 3. 프롬프트 작성 지침 (Gems 공식 + 텍스트 통합 + 디테일 강화)
+    # 3. 프롬프트 작성 지침 (Gems 공식 + 웹툰 표정 가이드)
     full_instruction = f"""
 [Role]
 You are a '2D Stickman Animation Prompt Director'.
@@ -326,37 +326,46 @@ You are a '2D Stickman Animation Prompt Director'.
 [Video Title]
 "{video_title}"
 
-[Style Guide - MUST FOLLOW]
+[Style Guide]
 {style_instruction}
 
+[GUIDE: Safe & Symbolic Expressions]
+Translate intense or negative emotions into **"Cute Comic/Webtoon Symbols"**.
+**Do NOT use text emoticons like (T_T) or (/ /) in the prompt.** Use full descriptive sentences.
+
+1. **Sharp / Determined (Softened Description):**
+   - Use: "Black dot eyes with **sharp slanted eyebrows**"
+   - Use: "Concentrated gaze with **thick eyebrows**"
+   - Direction: Make it look "serious and cute" rather than "scary or murderous".
+
+2. **Depressed / Tired (Softened Description):**
+   - Use: "Black dot eyes with **vertical gloom lines drawn on the forehead**"
+   - Use: "A **large comic-style sweat drop** on the head"
+   - Use: "**Dark blue shading** over the top half of the face"
+   - Direction: Make it look "comically sad" rather than "realistically haggard".
+
+3. **Shocked (Softened Description):**
+   - Use: "**Tiny dot eyes** with simple lines radiating from the head"
+   - Use: "Mouth open in a simple O shape"
+
 [CRITICAL RULE - POSE & FACE DETAILS]
-1. **If the character is sitting:** Do NOT just say "sitting". Describe the limbs. (e.g., "Sitting with knees bent", "Legs stretched out on the ruins", "Arms resting on knees").
-2. **If the character is looking down:** Do NOT hide the face. Use terms like "Head tilted down but face fully visible to camera", "Chin tucked but expression clear".
-3. **Camera:** For emotional scenes (despair, sitting), use **"Medium Shot"** or **"Close-up"** instead of Wide Shot to show the facial expression clearly.
+1. **If the character is sitting:** Describe the limbs specifically. (e.g., "Sitting with knees bent", "Arms resting on knees").
+2. **If the character is looking down:** Keep face visible. Use "Head tilted down but face fully visible to camera".
+3. **Camera:** For emotional scenes, use **"Medium Shot"** or **"Close-up"**.
 
 [Prompt Structure Formula]
 Write the prompt in **Korean** in this order:
 
-1. **[Camera Angle & Shot]**: 감정적인 장면(절망, 앉아있는 포즈)에서는 "미디엄 샷" 또는 "클로즈업" 사용
-   (예: 로우 앵글 미디엄 샷, 클로즈업, 미디엄 샷)
+1. **[Camera Angle & Shot]**: "미디엄 샷" 또는 "클로즈업" 사용
+2. **[Character & Costume]**: "하얀 원형 얼굴의 스틱맨" + 의상. **표정은 만화적 심볼로 묘사 (예: 세로 우울선, 땀방울, 기울어진 눈썹)**
+3. **[Pose Detail]**: 팔과 다리 구체적 위치 묘사
+4. **[Background & Lighting]**: 구체적인 색상과 조명
+5. **[Text Object Integration]**: {lang_guide} 핵심 키워드 2-3개를 네온사인, 홀로그램 등으로 배치
 
-2. **[Character & Costume]**: "하얀 원형 얼굴과 하얀 팔다리의 스틱맨" + 의상. **표정을 생생하게 묘사 (예: 눈물, 텅 빈 눈, 찌푸린 눈썹)**
-   (예: "하얀 몸과 하얀 팔다리를 가진 스틱맨이 낡은 회색 가디건을 입고 있다. 눈물이 흐르는 절망적인 표정.")
-
-3. **[Pose Detail]**: **팔과 다리가 구체적으로 어디에 위치해 있는지 묘사**
-   (예: "양손을 깍지 끼고", "어깨가 축 처져 있다", "무릎을 가슴 쪽으로 당겨 앉아 있다", "팔을 무릎 위에 힘없이 걸쳐 있다")
-
-4. **[Background & Lighting]**: 구체적인 색상과 조명 이름으로 생생하게 묘사
-   (예: "Golden Amber 조명이 비추는 고급 사무실", "Neon Pink와 Cold Blue가 어우러진 도시 야경")
-
-5. **[Text Object Integration]**: {lang_guide}
-   대본에서 핵심 키워드 2-3개를 추출하여 네온사인, 홀로그램, 그래피티 등으로 배치
-
-[Output Constraints]
+[Constraint]
 - 순수 텍스트만 출력 (마크다운 금지)
 - 무조건 한국어로 작성
-- 최소 5문장 이상으로 상세하게 묘사
-- 고개를 숙여도 얼굴이 카메라에 보이게 묘사
+- 이모티콘 기호 사용 금지
 
 [Script Segment]
 "{text_chunk}"
@@ -798,92 +807,102 @@ with st.sidebar:
     # ==========================================
     # [NEW] 컨셉별 스타일 프리셋 시스템
     # ==========================================
-    # [수정됨] Gems 스타일 + 텍스트 통합 버전
+    # [수정됨] Gems 스타일 + 웹툰 표정 가이드 버전
     STYLE_PRESETS = {
         "경제학": """
-[Core Identity - 절대 규칙]
-- Character: MUST be a "White circle-faced stickman"
-- **Body & Limbs: 몸, 팔, 다리 전체가 반드시 순수한 하얀색이어야 함. 검은색 스틱맨 금지.**
-- Face: 심플한 하얀 원형 얼굴에 2D 스타일 표정
-- Style: 2D 애니메이션, 심플한 라인, 선명한 플랫 컬러
+[Core Identity]
+- Character: "White circle-faced stickman" with PURE WHITE body and limbs.
+- Face Style: Minimalist white round head with **SIMPLE BLACK DOT EYES**.
+- **Shape Rule:** The face must ALWAYS be a perfect circle.
 
-[Costume & Role Rule - 의상 규칙]
-- 절대 일반적인 사람으로 그리지 말 것. 하얀 몸 위에 역할에 맞는 "코스튬" 입히기
+[Face & Expression Guide - Comic & Clean]
+- **Style:** "Cute", "Clean", "Iconic", "Webtoon-style".
+- **Eye Style:** Simple Black Dots.
+
+[How to Express Negative Emotions (Descriptive Only)]
+- **Depressed/Tired:** Use **"Vertical gloom lines drawn on the upper face"** or **"Blue face shading"**.
+- **Angry/Sharp:** Use **"Sharp slanted eyebrows"** over dot eyes.
+- **Shocked:** Use **"Tiny dot pupils"** or **"White blank eyes"**.
+- **Confused/Troubled:** Use a **"Large sweat drop on the side of the head"**.
+
+[Costume & Role]
 - CEO: 네이비 정장, 빨간 넥타이 / 가난한 사람: 낡은 회색 가디건
 - 직장인: 와이셔츠, 블라우스 / 부자: 금색 액세서리
-- 자영업자: 컬러풀한 앞치마 / 학생: 교복
 
-[Background & Lighting - 배경/조명]
-- 구체적인 조명 이름 사용: "Golden Amber", "Neon Pink", "Cold Blue", "Dramatic Spotlight"
-- 배경은 "Vivid architectural atmosphere" (네온 도시, 무너지는 폐허, 밝은 사무실 등)
-
-[Text Integration - 텍스트 통합 (핵심)]
-- 대본에서 추출한 핵심 한국어 키워드 2-3개를 장면에 자연스럽게 배치
-- 예시: 건물의 네온사인, 공중에 떠있는 홀로그램, 벽에 쓰인 글씨, 간판
-- 텍스트는 읽기 쉽고 배경과 어울리는 스타일로
+[Background & Text]
+- Lighting: "Golden Amber", "Neon Pink", "Cold Blue", "Dramatic Spotlight"
+- Text: 핵심 한국어 키워드 2-3개를 네온사인, 홀로그램 등으로 배치
 """,
         "역사": """
-[Core Identity - 절대 규칙]
-- Character: MUST be a "White circle-faced stickman"
-- **Body & Limbs: 몸, 팔, 다리 전체가 반드시 순수한 하얀색이어야 함. 검은색 스틱맨 금지.**
-- Face: 심플한 하얀 원형 얼굴에 2D 스타일 표정
-- Style: 2D 애니메이션, 심플한 라인, 선명한 플랫 컬러
+[Core Identity]
+- Character: "White circle-faced stickman" with PURE WHITE body and limbs.
+- Face Style: Minimalist white round head with **SIMPLE BLACK DOT EYES**.
+- **Shape Rule:** The face must ALWAYS be a perfect circle.
 
-[Costume & Role Rule - 역사 의상]
-- 절대 일반적인 사람으로 그리지 말 것. 하얀 몸 위에 시대에 맞는 "코스튬" 입히기
+[Face & Expression Guide - Comic & Clean]
+- **Style:** "Cute", "Clean", "Iconic", "Webtoon-style".
+- **Eye Style:** Simple Black Dots.
+
+[How to Express Negative Emotions (Descriptive Only)]
+- **Depressed/Tired:** Use **"Vertical gloom lines drawn on the upper face"** or **"Blue face shading"**.
+- **Angry/Sharp:** Use **"Sharp slanted eyebrows"** over dot eyes.
+- **Shocked:** Use **"Tiny dot pupils"** or **"White blank eyes"**.
+- **Confused/Troubled:** Use a **"Large sweat drop on the side of the head"**.
+
+[Costume & Role - 역사 의상]
 - 조선: 한복, 갓 / 로마: 토가, 갑옷 / 중세: 갑옷, 왕관, 드레스
 - 왕족: 금색 장식, 왕관 / 농민: 소박한 옷 / 전사: 무기와 갑옷
 
-[Background & Lighting - 배경/조명]
-- 구체적인 조명 이름 사용: "Candlelight Warm", "Royal Gold", "Battle Red", "Dawn Light"
-- 배경은 시대적 분위기 (궁궐, 전쟁터, 고대 도시, 시골 마을 등)
-
-[Text Integration - 텍스트 통합 (핵심)]
-- 대본에서 추출한 핵심 한국어 키워드 2-3개를 장면에 자연스럽게 배치
-- 예시: 깃발에 쓰인 글자, 두루마리 문서, 석비에 새겨진 글, 현수막
-- 텍스트는 시대에 맞는 서체 스타일로
+[Background & Text]
+- Lighting: "Candlelight Warm", "Royal Gold", "Battle Red", "Dawn Light"
+- Text: 깃발, 두루마리 문서, 석비 등에 핵심 한국어 키워드 배치
 """,
         "과학": """
-[Core Identity - 절대 규칙]
-- Character: MUST be a "White circle-faced stickman"
-- **Body & Limbs: 몸, 팔, 다리 전체가 반드시 순수한 하얀색이어야 함. 검은색 스틱맨 금지.**
-- Face: 심플한 하얀 원형 얼굴에 2D 스타일 표정
-- Style: 2D 애니메이션, 심플한 라인, 선명한 플랫 컬러
+[Core Identity]
+- Character: "White circle-faced stickman" with PURE WHITE body and limbs.
+- Face Style: Minimalist white round head with **SIMPLE BLACK DOT EYES**.
+- **Shape Rule:** The face must ALWAYS be a perfect circle.
 
-[Costume & Role Rule - 과학 의상]
-- 절대 일반적인 사람으로 그리지 말 것. 하얀 몸 위에 분야에 맞는 "코스튬" 입히기
+[Face & Expression Guide - Comic & Clean]
+- **Style:** "Cute", "Clean", "Iconic", "Webtoon-style".
+- **Eye Style:** Simple Black Dots.
+
+[How to Express Negative Emotions (Descriptive Only)]
+- **Depressed/Tired:** Use **"Vertical gloom lines drawn on the upper face"** or **"Blue face shading"**.
+- **Angry/Sharp:** Use **"Sharp slanted eyebrows"** over dot eyes.
+- **Shocked:** Use **"Tiny dot pupils"** or **"White blank eyes"**.
+- **Confused/Troubled:** Use a **"Large sweat drop on the side of the head"**.
+
+[Costume & Role - 과학 의상]
 - 과학자: 흰 가운, 보안경 / 의사: 수술복, 청진기
 - 우주비행사: 우주복 / 엔지니어: 작업복, 안전모
-- 로봇공학자: 기술 장갑 / 프로그래머: 캐주얼 후드
 
-[Background & Lighting - 배경/조명]
-- 구체적인 조명 이름 사용: "Lab White", "Neon Cyber", "Space Purple", "Hologram Blue"
-- 배경은 과학적 분위기 (실험실, 우주, 데이터센터, 미래 도시 등)
-
-[Text Integration - 텍스트 통합 (핵심)]
-- 대본에서 추출한 핵심 한국어 키워드 2-3개를 장면에 자연스럽게 배치
-- 예시: 홀로그램 디스플레이, 모니터 화면, 공중에 뜬 데이터, 실험 장비 라벨
-- 텍스트는 디지털/미래적 스타일로
+[Background & Text]
+- Lighting: "Lab White", "Neon Cyber", "Space Purple", "Hologram Blue"
+- Text: 홀로그램 디스플레이, 모니터 화면에 핵심 한국어 키워드 배치
 """,
         "커스텀 (직접 입력)": """
-[Core Identity - 절대 규칙]
-- Character: MUST be a "White circle-faced stickman"
-- **Body & Limbs: 몸, 팔, 다리 전체가 반드시 순수한 하얀색이어야 함. 검은색 스틱맨 금지.**
-- Face: 심플한 하얀 원형 얼굴에 2D 스타일 표정
-- Style: 2D 애니메이션, 심플한 라인, 선명한 플랫 컬러
+[Core Identity]
+- Character: "White circle-faced stickman" with PURE WHITE body and limbs.
+- Face Style: Minimalist white round head with **SIMPLE BLACK DOT EYES**.
+- **Shape Rule:** The face must ALWAYS be a perfect circle.
 
-[Costume & Role Rule - 의상 규칙]
-- 절대 일반적인 사람으로 그리지 말 것. 하얀 몸 위에 역할에 맞는 "코스튬" 입히기
+[Face & Expression Guide - Comic & Clean]
+- **Style:** "Cute", "Clean", "Iconic", "Webtoon-style".
+- **Eye Style:** Simple Black Dots.
+
+[How to Express Negative Emotions (Descriptive Only)]
+- **Depressed/Tired:** Use **"Vertical gloom lines drawn on the upper face"** or **"Blue face shading"**.
+- **Angry/Sharp:** Use **"Sharp slanted eyebrows"** over dot eyes.
+- **Shocked:** Use **"Tiny dot pupils"** or **"White blank eyes"**.
+- **Confused/Troubled:** Use a **"Large sweat drop on the side of the head"**.
+
+[Costume & Role]
 - 각 캐릭터의 직업/역할에 맞는 컬러풀하고 특징적인 의상
 
-[Background & Lighting - 배경/조명]
-- 구체적인 조명 이름 사용: "Golden Amber", "Neon Pink", "Cold Blue", "Dramatic Spotlight"
-- 배경은 "Vivid architectural atmosphere" (상황에 맞는 생생한 배경)
-
-[Text Integration - 텍스트 통합 (핵심)]
-- 대본에서 추출한 핵심 한국어 키워드 2-3개를 장면에 자연스럽게 배치
-- 예시: 네온사인, 간판, 홀로그램, 벽면 글씨, 배너
-- 텍스트는 읽기 쉽고 배경과 어울리는 스타일로
+[Background & Text]
+- Lighting: "Golden Amber", "Neon Pink", "Cold Blue", "Dramatic Spotlight"
+- Text: 핵심 한국어 키워드 2-3개를 네온사인, 간판, 홀로그램 등으로 배치
 """
     }
 
