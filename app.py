@@ -315,8 +315,8 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
     else:
         lang_guide = f"화면 속 핵심 키워드는 무조건 '{target_language}'로 표기하십시오."
 
-    # 2. [중요] Suffix - 장면 구성, 배경, 텍스트의 상황 인식 다양성 강조
-    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, simple lines, and flat vivid colors. **The scene composition, background, and text integration are context-aware and diverse based on the script's scenario.**"
+    # 2. [중요] Suffix - 장면 구성, 배경, 텍스트의 상황 인식 다양성 강조 + 깔끔한 테두리
+    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, simple lines, and flat vivid colors. **All text has a clean and distinct outline for readability.**"
 
     # 3. 프롬프트 작성 지침 (Gems 공식 + 상황별 배경/엑스트라/텍스트 가이드)
     full_instruction = f"""
@@ -352,6 +352,15 @@ Analyze the script's scenario and apply the corresponding visual elements:
    - **Extras:** None (focus on TV) or a news anchor stickman at desk.
    - **Text Integration:** Text inside a **"Breaking News" banner on a TV screen**, or on **news ticker at bottom**.
 
+[GUIDE: How to Create Readable & Sleek Text]
+When describing glowing text or neon signs, add a description of its **OUTLINE**.
+**Avoid making the outline too thick.** Keep it **clean and sharp**.
+
+- ❌ "A neon sign with a huge thick border." (Too clunky)
+- ✅ "A glowing neon sign with a **clean black outline**." (Perfect)
+- ✅ "Text '성공' written in **distinct, bordered neon letters**."
+- ✅ "A hologram text with a **sharp glowing border**."
+
 [CRITICAL RULE - POSE & FACE DETAILS]
 1. **If the character is sitting:** Describe the limbs specifically. (e.g., "Sitting with knees bent", "Arms resting on knees").
 2. **If the character is looking down:** Keep face visible. Use "Head tilted down but face fully visible to camera".
@@ -362,9 +371,9 @@ Write the prompt in **Korean** in this order:
 
 1. **[Camera Angle & Shot]**: "와이드 샷" (군중/대규모 장소) 또는 "미디엄 샷" (개인/감정 장면)
 2. **[Setting the Scene - Background & Context]**: **대본에 맞는 구체적인 배경 묘사 (밝은 회의실, 어두운 폐허, 북적이는 거리 등)**
-3. **[Main Character(s) & Action]**: "하얀 원형 얼굴의 스틱맨" + 행동, 의상, 필요시 **옷에 이름표** 묘사
+3. **[Main Character(s) & Action]**: "하얀 원형 얼굴의 스틱맨" + 행동, 의상, **눈**과 **입** 묘사, 필요시 **옷에 이름표** 묘사
 4. **[Extras/Crowd Composition]**: **(핵심)** 배경의 엑스트라 스틱맨들 묘사 (기자들, 분노한 군중, 슬픈 그림자 인물 등) - 없으면 "없음"
-5. **[Text Object Integration]**: {lang_guide} **핵심: 텍스트가 어떤 물체 위에 있는지 구체적으로 묘사 (TV화면, 시위 팻말, 간판, 셔츠 등)**. 키워드 2-3개 선택
+5. **[Text Object Integration]**: {lang_guide} **핵심: 텍스트가 어떤 물체 위에 있는지 + 'CLEAN OUTLINE' 또는 'SHARP BORDER' 명시**. 키워드 2-3개 선택
 6. **[Lighting & Mood]**: "Golden Amber", "Dark Stormy", "Clean White", "Neon Glow" 등 분위기에 맞는 조명
 
 [Constraint]
@@ -817,6 +826,7 @@ with st.sidebar:
 [Core Identity]
 - Character: "White circle-faced stickman" with PURE WHITE body and limbs.
 - Face Style: Minimalist white round head with eyes and mouth.
+- **Critical Rule:** Character MUST have EYES and MOUTH.
 
 [Context-Aware Visual Guide (Crucial)]
 Analyze the script's scenario and apply the corresponding visual elements:
@@ -832,14 +842,22 @@ Analyze the script's scenario and apply the corresponding visual elements:
    - **Text Integration:** Place text on **broken neon signs**, **cracked walls**, **graffiti**, or **scattered papers**.
 
 3. **Scenario: Market/Public Reaction (e.g., Trends, Opinions)**
-   - **Background:** Public spaces like streets, stock market floors, or online communities (represented visually).
+   - **Background:** Public spaces like streets, stock market floors, or online communities.
    - **Extras:** **Crowd of anonymous stickmen** showing reactions (angry, confused, cheering).
-   - **Text Integration:** Text on **protest signs**, **thought bubbles above crowds**, **stock ticker boards**, or **hologram graphs**.
+   - **Text Integration:** Text on **protest signs**, **thought bubbles above crowds**, **stock ticker boards**.
 
 4. **Scenario: News/Announcement**
    - **Background:** Cozy living room with TV, or a news studio desk.
    - **Extras:** None (focus on TV) or a news anchor.
    - **Text Integration:** Text inside a **"Breaking News" banner on a TV screen**.
+
+[Text Object Integration (Readable & Aesthetic)]
+- **CRITICAL TEXT RULE:** All neon signs or glowing text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
+- **Avoid making the outline too thick or clunky.** Keep it sleek.
+- **How to describe Neon Text:**
+    - "A glowing neon sign with a **clean black outline**."
+    - "Text written in **distinct, bordered neon letters**."
+    - "A **glowing outline text** floating in the air."
 
 [Costume & Role]
 - CEO: 네이비 정장, 빨간 넥타이 / 가난한 사람: 낡은 회색 가디건
@@ -852,6 +870,7 @@ Analyze the script's scenario and apply the corresponding visual elements:
 [Core Identity]
 - Character: "White circle-faced stickman" with PURE WHITE body and limbs.
 - Face Style: Minimalist white round head with eyes and mouth.
+- **Critical Rule:** Character MUST have EYES and MOUTH.
 
 [Context-Aware Visual Guide (Crucial)]
 Analyze the script's scenario and apply the corresponding visual elements:
@@ -876,6 +895,13 @@ Analyze the script's scenario and apply the corresponding visual elements:
    - **Extras:** Witnesses, historians, important figures.
    - **Text Integration:** Text on **documents**, **stone tablets**, **flags**.
 
+[Text Object Integration (Readable & Aesthetic)]
+- **CRITICAL TEXT RULE:** All text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
+- **Avoid making the outline too thick or clunky.** Keep it sleek.
+- **How to describe Text:**
+    - "A banner with **clean bordered text**."
+    - "Text carved on stone with **distinct, sharp edges**."
+
 [Costume & Role - 역사 의상]
 - 조선: 한복, 갓 / 로마: 토가, 갑옷 / 중세: 갑옷, 왕관, 드레스
 - 왕족: 금색 장식, 왕관 / 농민: 소박한 옷 / 전사: 무기와 갑옷
@@ -887,6 +913,7 @@ Analyze the script's scenario and apply the corresponding visual elements:
 [Core Identity]
 - Character: "White circle-faced stickman" with PURE WHITE body and limbs.
 - Face Style: Minimalist white round head with eyes and mouth.
+- **Critical Rule:** Character MUST have EYES and MOUTH.
 
 [Context-Aware Visual Guide (Crucial)]
 Analyze the script's scenario and apply the corresponding visual elements:
@@ -911,6 +938,13 @@ Analyze the script's scenario and apply the corresponding visual elements:
    - **Extras:** Robots, AI interfaces, holographic beings.
    - **Text Integration:** Text as **hologram UI**, **laser projections**, **digital billboards**.
 
+[Text Object Integration (Readable & Aesthetic)]
+- **CRITICAL TEXT RULE:** All hologram or glowing text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
+- **Avoid making the outline too thick or clunky.** Keep it sleek.
+- **How to describe Text:**
+    - "A hologram text with a **sharp glowing border**."
+    - "Digital display with **clean, distinct letters**."
+
 [Costume & Role - 과학 의상]
 - 과학자: 흰 가운, 보안경 / 의사: 수술복, 청진기
 - 우주비행사: 우주복 / 엔지니어: 작업복, 안전모
@@ -922,6 +956,7 @@ Analyze the script's scenario and apply the corresponding visual elements:
 [Core Identity]
 - Character: "White circle-faced stickman" with PURE WHITE body and limbs.
 - Face Style: Minimalist white round head with eyes and mouth.
+- **Critical Rule:** Character MUST have EYES and MOUTH.
 
 [Context-Aware Visual Guide (Crucial)]
 Analyze the script's scenario and apply the corresponding visual elements:
@@ -945,6 +980,13 @@ Analyze the script's scenario and apply the corresponding visual elements:
    - **Background:** Living room with TV, or news studio.
    - **Extras:** None or news anchor.
    - **Text Integration:** Text on **TV screen banner**.
+
+[Text Object Integration (Readable & Aesthetic)]
+- **CRITICAL TEXT RULE:** All neon signs or glowing text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
+- **Avoid making the outline too thick or clunky.** Keep it sleek.
+- **How to describe Text:**
+    - "A glowing neon sign with a **clean black outline**."
+    - "Text written in **distinct, bordered letters**."
 
 [Costume & Role]
 - 각 캐릭터의 직업/역할에 맞는 컬러풀하고 특징적인 의상
