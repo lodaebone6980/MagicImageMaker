@@ -1424,129 +1424,8 @@ if st.session_state['generated_results']:
     # 1. 일괄 작업 버튼 영역
     # ------------------------------------------------
     st.write("---")
-    st.subheader("⚡ 원클릭 일괄 생성 작업")
-    
-    c_btn1, c_btn2, c_btn3, c_btn4 = st.columns(4)
-    
-    with c_btn1:
-        zip_data = create_zip_buffer(IMAGE_OUTPUT_DIR)
-        st.download_button("📦 전체 이미지 ZIP 다운로드", data=zip_data, file_name="all_images.zip", mime="application/zip", use_container_width=True)
-
-    # TTS 전체 생성
-    with c_btn2:
-        if st.button("🔊 TTS 일괄 생성", use_container_width=True):
-            if not supertone_api_key or not selected_voice_id:
-                st.error("사이드바에서 API Key와 목소리를 설정해주세요.")
-            else:
-                # 오디오 변경 시 통합본 삭제
-                final_merged_file = os.path.join(VIDEO_OUTPUT_DIR, "FINAL_FULL_VIDEO.mp4")
-                if os.path.exists(final_merged_file):
-                    try: os.remove(final_merged_file)
-                    except: pass
-
-                status_box = st.status("🎙️ TTS 일괄 생성 중...", expanded=True)
-                progress_bar = status_box.progress(0)
-
-                apply_trim = False  # 원본 음성 생성 모드 고정
-                total_files = len(st.session_state['generated_results'])
-                completed_cnt = 0
-                
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    future_to_idx = {}
-                    for i, item in enumerate(st.session_state['generated_results']):
-                        future = executor.submit(
-                            process_single_tts_task, supertone_api_key, selected_voice_id, 
-                            item['script'], item['scene'], supertone_base_url, 
-                            tts_speed, tts_pitch, apply_trim
-                        )
-                        future_to_idx[future] = i
-                    
-                    for future in as_completed(future_to_idx):
-                        idx = future_to_idx[future]
-                        try:
-                            result_path = future.result()
-                            if "Error" not in str(result_path) and "VOICE_NOT_FOUND" not in str(result_path):
-                                st.session_state['generated_results'][idx]['audio_path'] = result_path
-                                st.session_state['generated_results'][idx]['video_path'] = None # 비디오 리셋
-                            else:
-                                st.write(f"⚠️ Scene {idx+1} 오류: {result_path}")
-                        except Exception as e:
-                            st.write(f"⚠️ Scene {idx+1} 시스템 오류: {e}")
-                        
-                        completed_cnt += 1
-                        progress_bar.progress(completed_cnt / total_files)
-                
-                status_box.update(label="✅ TTS 생성 완료!", state="complete", expanded=False)
-                time.sleep(1)
-                st.rerun()
-
-    # 비디오 전체 생성
-    with c_btn3:
-        has_audio = any(item.get('audio_path') for item in st.session_state['generated_results'])
-        if st.button("🎬 비디오 전체 일괄 생성", disabled=not has_audio, use_container_width=True):
-            final_merged_file = os.path.join(VIDEO_OUTPUT_DIR, "FINAL_FULL_VIDEO.mp4")
-            if os.path.exists(final_merged_file):
-                try: os.remove(final_merged_file)
-                except: pass
-            
-            status_box = st.status("🎬 비디오 렌더링 중...", expanded=True)
-            progress_bar = status_box.progress(0)
-            
-            total_files = len(st.session_state['generated_results'])
-            completed_cnt = 0
-            
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                future_to_idx = {}
-                for i, item in enumerate(st.session_state['generated_results']):
-                    is_zoom_in = (i % 2 == 0)
-                    future = executor.submit(process_single_video_task, item, VIDEO_OUTPUT_DIR, is_zoom_in)
-                    future_to_idx[future] = i
-                
-                for future in as_completed(future_to_idx):
-                    idx = future_to_idx[future]
-                    try:
-                        vid_path = future.result()
-                        if vid_path and "Error" not in vid_path:
-                            st.session_state['generated_results'][idx]['video_path'] = vid_path
-                        elif vid_path:
-                            st.write(f"⚠️ Scene {idx+1} 렌더링 오류: {vid_path}")
-                    except Exception as e:
-                        st.write(f"⚠️ Scene {idx+1} 시스템 오류: {e}")
-                    
-                    completed_cnt += 1
-                    progress_bar.progress(completed_cnt / total_files)
-            
-            status_box.update(label="✅ 비디오 생성 완료!", state="complete", expanded=False)
-            time.sleep(1)
-            st.rerun()
-
-    # 전체 병합
-    with c_btn4:
-        video_paths = [item.get('video_path') for item in st.session_state['generated_results'] if item.get('video_path')]
-        final_path = os.path.join(VIDEO_OUTPUT_DIR, "FINAL_FULL_VIDEO.mp4")
-        
-        if video_paths:
-            if st.button("🎞️ 전체 영상 합치기 (새로고침)", use_container_width=True):
-                with st.spinner("모든 비디오를 하나로 합치는 중..."):
-                    if os.path.exists(final_path):
-                        try: os.remove(final_path)
-                        except: pass
-                        
-                    merged_result = merge_all_videos(video_paths, VIDEO_OUTPUT_DIR)
-                    if "Error" in merged_result:
-                        st.error(merged_result)
-                    else:
-                        st.success("병합 완료!")
-                        st.rerun()
-
-            if os.path.exists(final_path):
-                 with open(final_path, "rb") as f:
-                    st.download_button("💾 전체 영상 다운로드 (MP4)", data=f, file_name="final_video.mp4", mime="video/mp4", use_container_width=True)
-        else:
-            st.button("🎞️ 전체 영상 합치기", disabled=True, use_container_width=True)
-
-    if not supertone_api_key or not selected_voice_id:
-        st.warning("🎙️ Supertone TTS 사용을 위해 API 설정을 확인하세요.")
+    zip_data = create_zip_buffer(IMAGE_OUTPUT_DIR)
+    st.download_button("📦 전체 이미지 ZIP 다운로드", data=zip_data, file_name="all_images.zip", mime="application/zip", use_container_width=True)
 
     # ------------------------------------------------
     # 2. 개별 리스트 및 [재생성] 기능
@@ -1594,63 +1473,11 @@ if st.session_state['generated_results']:
                             else:
                                 st.error("이미지 생성에 실패했습니다.")
 
-            # [오른쪽] 정보 및 오디오/비디오 컨트롤
+            # [오른쪽] 정보
             with cols[1]:
                 st.subheader(f"Scene {item['scene']:02d}")
                 st.caption(f"파일명: {item['filename']}")
-                
-                # 대본 수정 가능하게 할지? (현재는 display만)
                 st.write(f"**대본:** {item['script']}")
-                
-                st.markdown("---")
-                audio_col1, audio_col2 = st.columns([1, 3])
-                
-                # 오디오 로직
-                if item.get('audio_path') and os.path.exists(item['audio_path']):
-                    with audio_col1:
-                        st.audio(item['audio_path'])
-                        if st.button("🔄 오디오 재생성", key=f"re_tts_{item['scene']}"):
-                             item['audio_path'] = None
-                             item['video_path'] = None 
-                             st.rerun()
-                    
-                    with audio_col2:
-                        if item.get('video_path') and os.path.exists(item['video_path']):
-                            st.video(item['video_path'])
-                            with open(item['video_path'], "rb") as vf:
-                                st.download_button("⬇️ 비디오 저장", data=vf, file_name=f"scene_{item['scene']}.mp4", mime="video/mp4", key=f"down_vid_{item['scene']}")
-                        else:
-                            is_zoom_in_mode = (index % 2 == 0)
-                            button_label = f"🎬 비디오 생성 ({'줌인' if is_zoom_in_mode else '줌아웃'})"
-
-                            if st.button(button_label, key=f"gen_vid_{item['scene']}"):
-                                with st.spinner("렌더링 중..."):
-                                    vid_path = create_video_with_zoom(
-                                        item['path'], item['audio_path'], VIDEO_OUTPUT_DIR, 
-                                        item['scene'], is_zoom_in=is_zoom_in_mode
-                                    )
-                                    if "Error" in vid_path:
-                                        st.error(vid_path)
-                                    else:
-                                        st.session_state['generated_results'][index]['video_path'] = vid_path
-                                        st.rerun()
-                else:
-                    with audio_col1:
-                        if st.button("🔊 TTS 생성", key=f"gen_tts_{item['scene']}"):
-                            if not supertone_api_key or not selected_voice_id:
-                                st.error("설정 필요")
-                            else:
-                                with st.spinner("오디오 생성 중..."):
-                                    audio_result = generate_supertone_tts(
-                                        supertone_api_key, selected_voice_id, 
-                                        item['script'], item['scene'], supertone_base_url, 
-                                        speed=tts_speed, pitch=tts_pitch
-                                    )
-                                    if "Error" not in str(audio_result) and "VOICE_NOT_FOUND" != audio_result:
-                                        st.session_state['generated_results'][index]['audio_path'] = audio_result
-                                        st.rerun()
-                                    else:
-                                        st.error(audio_result)
 
                 with st.expander("프롬프트 확인"):
                     st.text(item['prompt'])
