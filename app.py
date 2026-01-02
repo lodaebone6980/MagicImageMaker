@@ -1213,8 +1213,6 @@ if 'is_processing' not in st.session_state:
     st.session_state['is_processing'] = False
 if 'split_scenes' not in st.session_state:
     st.session_state['split_scenes'] = []
-if 'scenes_expanded' not in st.session_state:
-    st.session_state['scenes_expanded'] = False
 
 # ==========================================
 # [NEW] 씬 분할 미리보기 (이미지 생성 전 확인)
@@ -1241,31 +1239,16 @@ if split_btn:
             st.session_state['split_scenes'] = split_text_automatically(preview_client, script_input, target_chars=scene_duration)
         st.success(f"✅ 총 {len(st.session_state['split_scenes'])}개 씬으로 분할되었습니다.")
 
-# [분할된 씬 표시] - 전체 열기/닫기 기능 포함 (이미지 생성 전에만 표시)
+# [분할된 씬 표시] - 단일 드롭박스 안에 개별 박스로 표시 (이미지 생성 전에만 표시)
 if st.session_state.get('split_scenes') and not st.session_state.get('generated_results'):
-    col_title, col_btns = st.columns([3, 1])
-    with col_title:
-        st.subheader("🎬 씬 분할 결과")
-    with col_btns:
-        col_open, col_close = st.columns(2)
-        with col_open:
-            if st.button("📂 전체 열기", use_container_width=True, key="expand_all_scenes"):
-                st.session_state['scenes_expanded'] = True
-                st.rerun()
-        with col_close:
-            if st.button("📁 전체 닫기", use_container_width=True, key="collapse_all_scenes"):
-                st.session_state['scenes_expanded'] = False
-                st.rerun()
-
-    for idx, scene_text in enumerate(st.session_state['split_scenes']):
-        with st.expander(f"Scene {idx + 1} ({len(scene_text)}자)", expanded=st.session_state.get('scenes_expanded', False)):
-            st.text_area(
-                f"씬 {idx + 1} 대본",
-                value=scene_text,
-                height=100,
-                key=f"scene_preview_{idx}",
-                disabled=True
-            )
+    with st.expander(f"🎬 씬 분할 결과 ({len(st.session_state['split_scenes'])}개)", expanded=True):
+        for idx, scene_text in enumerate(st.session_state['split_scenes']):
+            st.markdown(f"""
+            <div style="background-color: #f0f2f6; border-radius: 10px; padding: 15px; margin-bottom: 10px; border-left: 4px solid #4CAF50;">
+                <strong style="color: #1f77b4;">씬 {idx + 1}</strong> <span style="color: #666;">({len(scene_text)}자)</span>
+                <p style="margin-top: 8px; color: #333; white-space: pre-wrap;">{scene_text}</p>
+            </div>
+            """, unsafe_allow_html=True)
 
 st.divider()
 
@@ -1423,31 +1406,16 @@ if start_btn:
 if st.session_state['generated_results']:
     st.divider()
 
-    # [NEW] 결과물 위에 씬 분할 결과 표시
+    # [NEW] 결과물 위에 씬 분할 결과 표시 - 단일 드롭박스 안에 개별 박스
     if st.session_state.get('split_scenes'):
-        col_scene_title, col_scene_btns = st.columns([3, 1])
-        with col_scene_title:
-            st.subheader(f"📋 씬 분할 결과 ({len(st.session_state['split_scenes'])}개)")
-        with col_scene_btns:
-            col_o, col_c = st.columns(2)
-            with col_o:
-                if st.button("📂 열기", use_container_width=True, key="result_expand_all"):
-                    st.session_state['scenes_expanded'] = True
-                    st.rerun()
-            with col_c:
-                if st.button("📁 닫기", use_container_width=True, key="result_collapse_all"):
-                    st.session_state['scenes_expanded'] = False
-                    st.rerun()
-
-        for idx, scene_text in enumerate(st.session_state['split_scenes']):
-            with st.expander(f"Scene {idx + 1} ({len(scene_text)}자)", expanded=st.session_state.get('scenes_expanded', False)):
-                st.text_area(
-                    f"대본",
-                    value=scene_text,
-                    height=80,
-                    key=f"result_scene_{idx}",
-                    disabled=True
-                )
+        with st.expander(f"📋 씬 분할 결과 ({len(st.session_state['split_scenes'])}개)", expanded=False):
+            for idx, scene_text in enumerate(st.session_state['split_scenes']):
+                st.markdown(f"""
+                <div style="background-color: #f0f2f6; border-radius: 10px; padding: 15px; margin-bottom: 10px; border-left: 4px solid #4CAF50;">
+                    <strong style="color: #1f77b4;">씬 {idx + 1}</strong> <span style="color: #666;">({len(scene_text)}자)</span>
+                    <p style="margin-top: 8px; color: #333; white-space: pre-wrap;">{scene_text}</p>
+                </div>
+                """, unsafe_allow_html=True)
         st.divider()
 
     st.header(f"📸 결과물 ({len(st.session_state['generated_results'])}장)")
