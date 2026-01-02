@@ -300,7 +300,7 @@ def make_filename(scene_num, text_chunk):
 # [수정됨] 함수: 프롬프트 생성 (컨셉 기반 통합 버전)
 # ==========================================
 def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, target_language="Korean"):
-    """[수정됨] Gems 공식 + 웹툰 스타일 표정 가이드 버전"""
+    """[수정됨] Gems 공식 + 상황별 배경/텍스트 가이드 버전"""
     scene_num = index + 1
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TEXT_MODEL_NAME}:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
@@ -315,10 +315,10 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
     else:
         lang_guide = f"화면 속 핵심 키워드는 무조건 '{target_language}'로 표기하십시오."
 
-    # 2. [중요] Suffix - 깔끔하고 귀여운 스타일 강조
-    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, simple lines, and flat vivid colors. **Face features are minimalist, cute, and iconic with simple black dot eyes.**"
+    # 2. [중요] Suffix - 장면 구성, 배경, 텍스트의 상황 인식 다양성 강조 + 깔끔한 테두리
+    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, simple lines, and flat vivid colors. **All text has a clean and distinct outline for readability.**"
 
-    # 3. 프롬프트 작성 지침 (Gems 공식 + 웹툰 표정 가이드)
+    # 3. 프롬프트 작성 지침 (Gems 공식 + 상황별 배경/엑스트라/텍스트 가이드)
     full_instruction = f"""
 [Role]
 You are a '2D Stickman Animation Prompt Director'.
@@ -329,43 +329,56 @@ You are a '2D Stickman Animation Prompt Director'.
 [Style Guide]
 {style_instruction}
 
-[GUIDE: Safe & Symbolic Expressions]
-Translate intense or negative emotions into **"Cute Comic/Webtoon Symbols"**.
-**Do NOT use text emoticons like (T_T) or (/ /) in the prompt.** Use full descriptive sentences.
+[GUIDE: Context-Aware Visual Guide (Crucial)]
+Analyze the script's scenario and apply the corresponding visual elements:
 
-1. **Sharp / Determined (Softened Description):**
-   - Use: "Black dot eyes with **sharp slanted eyebrows**"
-   - Use: "Concentrated gaze with **thick eyebrows**"
-   - Direction: Make it look "serious and cute" rather than "scary or murderous".
+1. **Scenario: Business/Partnership (e.g., M&A, Deals, Handshakes)**
+   - **Background:** Bright conference room, stage with handshake, modern office with glass windows.
+   - **Extras:** A few other stickmen (reporters with microphones, investors in suits) in the background.
+   - **Text Integration:** Place text on **podiums**, **company flags**, **shirt labels (name tags)**, or **large presentation screens**.
 
-2. **Depressed / Tired (Softened Description):**
-   - Use: "Black dot eyes with **vertical gloom lines drawn on the forehead**"
-   - Use: "A **large comic-style sweat drop** on the head"
-   - Use: "**Dark blue shading** over the top half of the face"
-   - Direction: Make it look "comically sad" rather than "realistically haggard".
+2. **Scenario: Economic Crisis/Failure (e.g., Collapse, Despair, Bankruptcy)**
+   - **Background:** Dark, crumbling city ruins, stormy alley, broken office with scattered papers.
+   - **Extras:** Usually solo, or with a few shadowy, sad stickmen figures in the distance.
+   - **Text Integration:** Place text on **broken neon signs**, **cracked walls**, **graffiti**, or **scattered papers on the ground**.
 
-3. **Shocked (Softened Description):**
-   - Use: "**Tiny dot eyes** with simple lines radiating from the head"
-   - Use: "Mouth open in a simple O shape"
+3. **Scenario: Market/Public Reaction (e.g., Trends, Opinions, Protests)**
+   - **Background:** Public spaces like busy streets, stock market trading floors, or online community screens.
+   - **Extras:** **Crowd of anonymous stickmen** showing reactions (angry faces, confused expressions, cheering poses).
+   - **Text Integration:** Text on **protest signs held by crowd**, **thought bubbles above crowds**, **stock ticker boards**.
+
+4. **Scenario: News/Announcement (e.g., Breaking News, Reports)**
+   - **Background:** Cozy living room with TV, or a professional news studio desk.
+   - **Extras:** None (focus on TV) or a news anchor stickman at desk.
+   - **Text Integration:** Text inside a **"Breaking News" banner on a TV screen**, or on **news ticker at bottom**.
+
+[GUIDE: How to Create Readable & Sleek Text]
+When describing glowing text or neon signs, add a description of its **OUTLINE**.
+**Avoid making the outline too thick.** Keep it **clean and sharp**.
+
+- ❌ "A neon sign with a huge thick border." (Too clunky)
+- ✅ "A glowing neon sign with a **clean black outline**." (Perfect)
+- ✅ "Text '성공' written in **distinct, bordered neon letters**."
+- ✅ "A hologram text with a **sharp glowing border**."
 
 [CRITICAL RULE - POSE & FACE DETAILS]
 1. **If the character is sitting:** Describe the limbs specifically. (e.g., "Sitting with knees bent", "Arms resting on knees").
 2. **If the character is looking down:** Keep face visible. Use "Head tilted down but face fully visible to camera".
-3. **Camera:** For emotional scenes, use **"Medium Shot"** or **"Close-up"**.
+3. **Camera:** For emotional scenes, use **"Medium Shot"** or **"Close-up"**. For crowds, use **"Wide Shot"**.
 
 [Prompt Structure Formula]
 Write the prompt in **Korean** in this order:
 
-1. **[Camera Angle & Shot]**: "미디엄 샷" 또는 "클로즈업" 사용
-2. **[Character & Costume]**: "하얀 원형 얼굴의 스틱맨" + 의상. **표정은 만화적 심볼로 묘사 (예: 세로 우울선, 땀방울, 기울어진 눈썹)**
-3. **[Pose Detail]**: 팔과 다리 구체적 위치 묘사
-4. **[Background & Lighting]**: 구체적인 색상과 조명
-5. **[Text Object Integration]**: {lang_guide} 핵심 키워드 2-3개를 네온사인, 홀로그램 등으로 배치
+1. **[Camera Angle & Shot]**: "와이드 샷" (군중/대규모 장소) 또는 "미디엄 샷" (개인/감정 장면)
+2. **[Setting the Scene - Background & Context]**: **대본에 맞는 구체적인 배경 묘사 (밝은 회의실, 어두운 폐허, 북적이는 거리 등)**
+3. **[Main Character(s) & Action]**: "하얀 원형 얼굴의 스틱맨" + 행동, 의상, **눈**과 **입** 묘사, 필요시 **옷에 이름표** 묘사
+4. **[Extras/Crowd Composition]**: **(핵심)** 배경의 엑스트라 스틱맨들 묘사 (기자들, 분노한 군중, 슬픈 그림자 인물 등) - 없으면 "없음"
+5. **[Text Object Integration]**: {lang_guide} **핵심: 텍스트가 어떤 물체 위에 있는지 + 'CLEAN OUTLINE' 또는 'SHARP BORDER' 명시**. 키워드 2-3개 선택
+6. **[Lighting & Mood]**: "Golden Amber", "Dark Stormy", "Clean White", "Neon Glow" 등 분위기에 맞는 조명
 
 [Constraint]
 - 순수 텍스트만 출력 (마크다운 금지)
 - 무조건 한국어로 작성
-- 이모티콘 기호 사용 금지
 
 [Script Segment]
 "{text_chunk}"
@@ -807,102 +820,179 @@ with st.sidebar:
     # ==========================================
     # [NEW] 컨셉별 스타일 프리셋 시스템
     # ==========================================
-    # [수정됨] Gems 스타일 + 웹툰 표정 가이드 버전
+    # [수정됨] Gems 스타일 + Context-Aware Visual Guide
     STYLE_PRESETS = {
         "경제학": """
 [Core Identity]
 - Character: "White circle-faced stickman" with PURE WHITE body and limbs.
-- Face Style: Minimalist white round head with **SIMPLE BLACK DOT EYES**.
-- **Shape Rule:** The face must ALWAYS be a perfect circle.
+- Face Style: Minimalist white round head with eyes and mouth.
+- **Critical Rule:** Character MUST have EYES and MOUTH.
 
-[Face & Expression Guide - Comic & Clean]
-- **Style:** "Cute", "Clean", "Iconic", "Webtoon-style".
-- **Eye Style:** Simple Black Dots.
+[Context-Aware Visual Guide (Crucial)]
+Analyze the script's scenario and apply the corresponding visual elements:
 
-[How to Express Negative Emotions (Descriptive Only)]
-- **Depressed/Tired:** Use **"Vertical gloom lines drawn on the upper face"** or **"Blue face shading"**.
-- **Angry/Sharp:** Use **"Sharp slanted eyebrows"** over dot eyes.
-- **Shocked:** Use **"Tiny dot pupils"** or **"White blank eyes"**.
-- **Confused/Troubled:** Use a **"Large sweat drop on the side of the head"**.
+1. **Scenario: Business/Partnership (e.g., M&A, Deals)**
+   - **Background:** Bright conference room, stage with handshake, modern office.
+   - **Extras:** A few other stickmen (reporters, investors) in the background.
+   - **Text Integration:** Place text on **podiums**, **company flags**, **shirt labels**, or **large presentation screens**.
+
+2. **Scenario: Economic Crisis/Failure (e.g., Collapse, Despair)**
+   - **Background:** Dark, crumbling city ruins, stormy alley, broken offices.
+   - **Extras:** Usually solo, or with a few shadowy, sad figures in the distance.
+   - **Text Integration:** Place text on **broken neon signs**, **cracked walls**, **graffiti**, or **scattered papers**.
+
+3. **Scenario: Market/Public Reaction (e.g., Trends, Opinions)**
+   - **Background:** Public spaces like streets, stock market floors, or online communities.
+   - **Extras:** **Crowd of anonymous stickmen** showing reactions (angry, confused, cheering).
+   - **Text Integration:** Text on **protest signs**, **thought bubbles above crowds**, **stock ticker boards**.
+
+4. **Scenario: News/Announcement**
+   - **Background:** Cozy living room with TV, or a news studio desk.
+   - **Extras:** None (focus on TV) or a news anchor.
+   - **Text Integration:** Text inside a **"Breaking News" banner on a TV screen**.
+
+[Text Object Integration (Readable & Aesthetic)]
+- **CRITICAL TEXT RULE:** All neon signs or glowing text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
+- **Avoid making the outline too thick or clunky.** Keep it sleek.
+- **How to describe Neon Text:**
+    - "A glowing neon sign with a **clean black outline**."
+    - "Text written in **distinct, bordered neon letters**."
+    - "A **glowing outline text** floating in the air."
 
 [Costume & Role]
 - CEO: 네이비 정장, 빨간 넥타이 / 가난한 사람: 낡은 회색 가디건
 - 직장인: 와이셔츠, 블라우스 / 부자: 금색 액세서리
 
-[Background & Text]
-- Lighting: "Golden Amber", "Neon Pink", "Cold Blue", "Dramatic Spotlight"
-- Text: 핵심 한국어 키워드 2-3개를 네온사인, 홀로그램 등으로 배치
+[Face Expression Guide]
+- Use simple cartoon eyes and mouths to clearly show emotions.
 """,
         "역사": """
 [Core Identity]
 - Character: "White circle-faced stickman" with PURE WHITE body and limbs.
-- Face Style: Minimalist white round head with **SIMPLE BLACK DOT EYES**.
-- **Shape Rule:** The face must ALWAYS be a perfect circle.
+- Face Style: Minimalist white round head with eyes and mouth.
+- **Critical Rule:** Character MUST have EYES and MOUTH.
 
-[Face & Expression Guide - Comic & Clean]
-- **Style:** "Cute", "Clean", "Iconic", "Webtoon-style".
-- **Eye Style:** Simple Black Dots.
+[Context-Aware Visual Guide (Crucial)]
+Analyze the script's scenario and apply the corresponding visual elements:
 
-[How to Express Negative Emotions (Descriptive Only)]
-- **Depressed/Tired:** Use **"Vertical gloom lines drawn on the upper face"** or **"Blue face shading"**.
-- **Angry/Sharp:** Use **"Sharp slanted eyebrows"** over dot eyes.
-- **Shocked:** Use **"Tiny dot pupils"** or **"White blank eyes"**.
-- **Confused/Troubled:** Use a **"Large sweat drop on the side of the head"**.
+1. **Scenario: War/Battle**
+   - **Background:** Burning battlefield, siege walls, army camps.
+   - **Extras:** **Army of stickmen soldiers** in the background, fallen warriors.
+   - **Text Integration:** Text on **war flags**, **shield emblems**, **banners**.
+
+2. **Scenario: Royal/Palace**
+   - **Background:** Throne room with golden decorations, royal garden.
+   - **Extras:** Servants, guards, nobles in the background.
+   - **Text Integration:** Text on **royal seals**, **scrolls**, **throne inscriptions**.
+
+3. **Scenario: Revolution/Uprising**
+   - **Background:** Town square, burning buildings, palace gates.
+   - **Extras:** **Angry crowd of stickmen** with torches and pitchforks.
+   - **Text Integration:** Text on **protest banners**, **wanted posters**, **graffiti on walls**.
+
+4. **Scenario: Historical Event/Moment**
+   - **Background:** Iconic historical setting (e.g., signing ceremony, coronation).
+   - **Extras:** Witnesses, historians, important figures.
+   - **Text Integration:** Text on **documents**, **stone tablets**, **flags**.
+
+[Text Object Integration (Readable & Aesthetic)]
+- **CRITICAL TEXT RULE:** All text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
+- **Avoid making the outline too thick or clunky.** Keep it sleek.
+- **How to describe Text:**
+    - "A banner with **clean bordered text**."
+    - "Text carved on stone with **distinct, sharp edges**."
 
 [Costume & Role - 역사 의상]
 - 조선: 한복, 갓 / 로마: 토가, 갑옷 / 중세: 갑옷, 왕관, 드레스
 - 왕족: 금색 장식, 왕관 / 농민: 소박한 옷 / 전사: 무기와 갑옷
 
-[Background & Text]
-- Lighting: "Candlelight Warm", "Royal Gold", "Battle Red", "Dawn Light"
-- Text: 깃발, 두루마리 문서, 석비 등에 핵심 한국어 키워드 배치
+[Face Expression Guide]
+- Use simple cartoon eyes and mouths to clearly show emotions.
 """,
         "과학": """
 [Core Identity]
 - Character: "White circle-faced stickman" with PURE WHITE body and limbs.
-- Face Style: Minimalist white round head with **SIMPLE BLACK DOT EYES**.
-- **Shape Rule:** The face must ALWAYS be a perfect circle.
+- Face Style: Minimalist white round head with eyes and mouth.
+- **Critical Rule:** Character MUST have EYES and MOUTH.
 
-[Face & Expression Guide - Comic & Clean]
-- **Style:** "Cute", "Clean", "Iconic", "Webtoon-style".
-- **Eye Style:** Simple Black Dots.
+[Context-Aware Visual Guide (Crucial)]
+Analyze the script's scenario and apply the corresponding visual elements:
 
-[How to Express Negative Emotions (Descriptive Only)]
-- **Depressed/Tired:** Use **"Vertical gloom lines drawn on the upper face"** or **"Blue face shading"**.
-- **Angry/Sharp:** Use **"Sharp slanted eyebrows"** over dot eyes.
-- **Shocked:** Use **"Tiny dot pupils"** or **"White blank eyes"**.
-- **Confused/Troubled:** Use a **"Large sweat drop on the side of the head"**.
+1. **Scenario: Discovery/Breakthrough**
+   - **Background:** Clean laboratory, research facility, eureka moment setting.
+   - **Extras:** Research team stickmen celebrating or observing.
+   - **Text Integration:** Text on **computer monitors**, **hologram displays**, **scientific charts**.
+
+2. **Scenario: Space/Exploration**
+   - **Background:** Starry cosmos, spaceship interior, alien planet surface.
+   - **Extras:** Astronaut crew, mission control stickmen on screens.
+   - **Text Integration:** Text on **spaceship consoles**, **mission patches**, **floating HUD**.
+
+3. **Scenario: Disaster/Failure**
+   - **Background:** Exploding lab, malfunctioning equipment, warning lights.
+   - **Extras:** Panicking scientists, evacuation scenes.
+   - **Text Integration:** Text on **warning signs**, **error screens**, **scattered papers**.
+
+4. **Scenario: Future/Technology**
+   - **Background:** Futuristic city, cyber world, high-tech facility.
+   - **Extras:** Robots, AI interfaces, holographic beings.
+   - **Text Integration:** Text as **hologram UI**, **laser projections**, **digital billboards**.
+
+[Text Object Integration (Readable & Aesthetic)]
+- **CRITICAL TEXT RULE:** All hologram or glowing text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
+- **Avoid making the outline too thick or clunky.** Keep it sleek.
+- **How to describe Text:**
+    - "A hologram text with a **sharp glowing border**."
+    - "Digital display with **clean, distinct letters**."
 
 [Costume & Role - 과학 의상]
 - 과학자: 흰 가운, 보안경 / 의사: 수술복, 청진기
 - 우주비행사: 우주복 / 엔지니어: 작업복, 안전모
 
-[Background & Text]
-- Lighting: "Lab White", "Neon Cyber", "Space Purple", "Hologram Blue"
-- Text: 홀로그램 디스플레이, 모니터 화면에 핵심 한국어 키워드 배치
+[Face Expression Guide]
+- Use simple cartoon eyes and mouths to clearly show emotions.
 """,
         "커스텀 (직접 입력)": """
 [Core Identity]
 - Character: "White circle-faced stickman" with PURE WHITE body and limbs.
-- Face Style: Minimalist white round head with **SIMPLE BLACK DOT EYES**.
-- **Shape Rule:** The face must ALWAYS be a perfect circle.
+- Face Style: Minimalist white round head with eyes and mouth.
+- **Critical Rule:** Character MUST have EYES and MOUTH.
 
-[Face & Expression Guide - Comic & Clean]
-- **Style:** "Cute", "Clean", "Iconic", "Webtoon-style".
-- **Eye Style:** Simple Black Dots.
+[Context-Aware Visual Guide (Crucial)]
+Analyze the script's scenario and apply the corresponding visual elements:
 
-[How to Express Negative Emotions (Descriptive Only)]
-- **Depressed/Tired:** Use **"Vertical gloom lines drawn on the upper face"** or **"Blue face shading"**.
-- **Angry/Sharp:** Use **"Sharp slanted eyebrows"** over dot eyes.
-- **Shocked:** Use **"Tiny dot pupils"** or **"White blank eyes"**.
-- **Confused/Troubled:** Use a **"Large sweat drop on the side of the head"**.
+1. **Scenario: Business/Partnership**
+   - **Background:** Conference room, stage, modern office.
+   - **Extras:** Other stickmen (reporters, investors) in the background.
+   - **Text Integration:** Text on **podiums**, **flags**, **shirt labels**, **screens**.
+
+2. **Scenario: Crisis/Failure**
+   - **Background:** Dark ruins, stormy alley, broken offices.
+   - **Extras:** Solo, or with shadowy figures in the distance.
+   - **Text Integration:** Text on **broken signs**, **cracked walls**, **graffiti**.
+
+3. **Scenario: Public Reaction**
+   - **Background:** Public spaces, streets, gathering places.
+   - **Extras:** **Crowd of stickmen** showing reactions.
+   - **Text Integration:** Text on **signs**, **thought bubbles**, **ticker boards**.
+
+4. **Scenario: News/Announcement**
+   - **Background:** Living room with TV, or news studio.
+   - **Extras:** None or news anchor.
+   - **Text Integration:** Text on **TV screen banner**.
+
+[Text Object Integration (Readable & Aesthetic)]
+- **CRITICAL TEXT RULE:** All neon signs or glowing text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
+- **Avoid making the outline too thick or clunky.** Keep it sleek.
+- **How to describe Text:**
+    - "A glowing neon sign with a **clean black outline**."
+    - "Text written in **distinct, bordered letters**."
 
 [Costume & Role]
 - 각 캐릭터의 직업/역할에 맞는 컬러풀하고 특징적인 의상
 
-[Background & Text]
-- Lighting: "Golden Amber", "Neon Pink", "Cold Blue", "Dramatic Spotlight"
-- Text: 핵심 한국어 키워드 2-3개를 네온사인, 간판, 홀로그램 등으로 배치
+[Face Expression Guide]
+- Use simple cartoon eyes and mouths to clearly show emotions.
 """
     }
 
