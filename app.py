@@ -1181,11 +1181,11 @@ with col_input_opt:
     st.info("⏱️ 씬 분할 설정")
     scene_duration = st.slider(
         "한 씬당 목표 글자수",
-        min_value=150,
-        max_value=350,
-        value=227,
+        min_value=200,
+        max_value=600,
+        value=400,
         step=10,
-        help="공백 포함 약 227자(375byte) = 약 35초 분량. AI가 문맥을 파악하여 이 길이 근처에서 씬을 나눕니다."
+        help="공백 포함 약 400자 = 약 60초 분량. AI가 문맥을 파악하여 이 길이 근처에서 씬을 나눕니다."
     )
     st.caption(f"약 {scene_duration}자 ≈ {scene_duration // 6}초 분량")
 
