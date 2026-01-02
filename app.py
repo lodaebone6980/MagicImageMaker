@@ -300,7 +300,7 @@ def make_filename(scene_num, text_chunk):
 # [수정됨] 함수: 프롬프트 생성 (컨셉 기반 통합 버전)
 # ==========================================
 def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, target_language="Korean"):
-    """[수정됨] Gems 공식 + 웹툰 스타일 표정 가이드 버전"""
+    """[수정됨] Gems 공식 + 상황별 배경/텍스트 가이드 버전"""
     scene_num = index + 1
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TEXT_MODEL_NAME}:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
@@ -315,10 +315,10 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
     else:
         lang_guide = f"화면 속 핵심 키워드는 무조건 '{target_language}'로 표기하십시오."
 
-    # 2. [중요] Suffix - 깔끔하고 귀여운 스타일 강조
-    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, simple lines, and flat vivid colors. **Face features are minimalist, cute, and iconic with simple black dot eyes.**"
+    # 2. [중요] Suffix - 배경과 텍스트의 다양성 강조
+    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, simple lines, and flat vivid colors. **Backgrounds and Texts are context-aware and diverse.**"
 
-    # 3. 프롬프트 작성 지침 (Gems 공식 + 웹툰 표정 가이드)
+    # 3. 프롬프트 작성 지침 (Gems 공식 + 상황별 배경/텍스트 가이드)
     full_instruction = f"""
 [Role]
 You are a '2D Stickman Animation Prompt Director'.
@@ -329,24 +329,27 @@ You are a '2D Stickman Animation Prompt Director'.
 [Style Guide]
 {style_instruction}
 
-[GUIDE: Safe & Symbolic Expressions]
-Translate intense or negative emotions into **"Cute Comic/Webtoon Symbols"**.
-**Do NOT use text emoticons like (T_T) or (/ /) in the prompt.** Use full descriptive sentences.
+[GUIDE: How to Diversify Text & Background]
+Analyze the script and choose the best **"Visual Metaphor"**:
 
-1. **Sharp / Determined (Softened Description):**
-   - Use: "Black dot eyes with **sharp slanted eyebrows**"
-   - Use: "Concentrated gaze with **thick eyebrows**"
-   - Direction: Make it look "serious and cute" rather than "scary or murderous".
+1. **Scenario: Corporate Deal / Partnership (e.g., Samsung & ZF)**
+   - **Background:** Bright press conference room or handshake stage.
+   - **Text Placement:** Put names as **labels on the stickmen's shirts** or on **flags/podiums**.
+   - **Text Style:** Clean, bold official font.
 
-2. **Depressed / Tired (Softened Description):**
-   - Use: "Black dot eyes with **vertical gloom lines drawn on the forehead**"
-   - Use: "A **large comic-style sweat drop** on the head"
-   - Use: "**Dark blue shading** over the top half of the face"
-   - Direction: Make it look "comically sad" rather than "realistically haggard".
+2. **Scenario: Economic Decline / Ruin**
+   - **Background:** Dark ruins, cracked buildings, rain.
+   - **Text Placement:** Text as **broken neon signs**, **graffiti on debris**, or **flickering holograms**.
+   - **Text Style:** Glowing, cracked, or rough font.
 
-3. **Shocked (Softened Description):**
-   - Use: "**Tiny dot eyes** with simple lines radiating from the head"
-   - Use: "Mouth open in a simple O shape"
+3. **Scenario: News / Announcement**
+   - **Background:** Living room with a TV, or a News Anchor desk.
+   - **Text Placement:** Text inside a **"Breaking News" red box on a TV screen**.
+   - **Text Style:** Standard news ticker font.
+
+4. **Scenario: Technology / Future**
+   - **Background:** Cyber space, lab, or next to a high-tech car.
+   - **Text Placement:** Text as **floating HUD/UI interface** or **laser projection**.
 
 [CRITICAL RULE - POSE & FACE DETAILS]
 1. **If the character is sitting:** Describe the limbs specifically. (e.g., "Sitting with knees bent", "Arms resting on knees").
@@ -356,16 +359,15 @@ Translate intense or negative emotions into **"Cute Comic/Webtoon Symbols"**.
 [Prompt Structure Formula]
 Write the prompt in **Korean** in this order:
 
-1. **[Camera Angle & Shot]**: "미디엄 샷" 또는 "클로즈업" 사용
-2. **[Character & Costume]**: "하얀 원형 얼굴의 스틱맨" + 의상. **표정은 만화적 심볼로 묘사 (예: 세로 우울선, 땀방울, 기울어진 눈썹)**
-3. **[Pose Detail]**: 팔과 다리 구체적 위치 묘사
-4. **[Background & Lighting]**: 구체적인 색상과 조명
-5. **[Text Object Integration]**: {lang_guide} 핵심 키워드 2-3개를 네온사인, 홀로그램 등으로 배치
+1. **[Camera Angle & Shot]**: "미디엄 샷", "와이드 샷" 등 상황에 맞게 선택
+2. **[Background & Context]**: **대본에 맞는 구체적인 배경 묘사 (스튜디오, 폐허, 회의실, 무대 등)**
+3. **[Character & Action]**: "하얀 원형 얼굴의 스틱맨" + 행동. 필요시 **옷에 이름표** 묘사
+4. **[Text Object Integration]**: {lang_guide} **핵심: 텍스트가 어떤 물체 위에 있는지 구체적으로 묘사 (TV화면, 간판, 셔츠, 벽 등)**. 키워드 2-3개 선택
+5. **[Lighting & Color]**: "Golden Amber", "Neon Pink", "Clean White" 등 구체적인 조명
 
 [Constraint]
 - 순수 텍스트만 출력 (마크다운 금지)
 - 무조건 한국어로 작성
-- 이모티콘 기호 사용 금지
 
 [Script Segment]
 "{text_chunk}"
@@ -807,102 +809,107 @@ with st.sidebar:
     # ==========================================
     # [NEW] 컨셉별 스타일 프리셋 시스템
     # ==========================================
-    # [수정됨] Gems 스타일 + 웹툰 표정 가이드 버전
+    # [수정됨] Gems 스타일 + 상황별 배경/텍스트 가이드
     STYLE_PRESETS = {
         "경제학": """
 [Core Identity]
 - Character: "White circle-faced stickman" with PURE WHITE body and limbs.
-- Face Style: Minimalist white round head with **SIMPLE BLACK DOT EYES**.
-- **Shape Rule:** The face must ALWAYS be a perfect circle.
+- Face Style: Minimalist white round head with simple cartoon eyes and mouth.
 
-[Face & Expression Guide - Comic & Clean]
-- **Style:** "Cute", "Clean", "Iconic", "Webtoon-style".
-- **Eye Style:** Simple Black Dots.
+[Background Variety Rule (Context-Based)]
+- **DO NOT always draw a city.** Analyze the script to choose the setting:
+    - *News/Fact:* Bright TV News Studio, Press Conference Room with podiums.
+    - *Despair/Ruin:* Dark crumbled concrete ruins, stormy alleyway.
+    - *Success/Hope:* Golden stage with spotlight, warm cozy living room.
+    - *Business:* Modern meeting room with charts, handshake scene.
 
-[How to Express Negative Emotions (Descriptive Only)]
-- **Depressed/Tired:** Use **"Vertical gloom lines drawn on the upper face"** or **"Blue face shading"**.
-- **Angry/Sharp:** Use **"Sharp slanted eyebrows"** over dot eyes.
-- **Shocked:** Use **"Tiny dot pupils"** or **"White blank eyes"**.
-- **Confused/Troubled:** Use a **"Large sweat drop on the side of the head"**.
+[Text Object Integration (Make text part of the world)]
+- **DO NOT just float text in air.** Integrate it into objects:
+    - *News:* Text on **"TV Breaking News Screen"** or **"Lower Third Banner"**.
+    - *Business:* Text on **"Presentation Slide"**, **"Graph/Chart"**, or **"Labels on Money Bags"**.
+    - *Identity:* Text labels on **"Character's Chest/Shirt"** (e.g., company names).
+    - *Atmosphere:* Text as **"Glowing Neon Sign"**, **"Graffiti on Wall"**, or **"Hologram UI"**.
 
 [Costume & Role]
 - CEO: 네이비 정장, 빨간 넥타이 / 가난한 사람: 낡은 회색 가디건
 - 직장인: 와이셔츠, 블라우스 / 부자: 금색 액세서리
 
-[Background & Text]
-- Lighting: "Golden Amber", "Neon Pink", "Cold Blue", "Dramatic Spotlight"
-- Text: 핵심 한국어 키워드 2-3개를 네온사인, 홀로그램 등으로 배치
+[Face Expression]
+- Use simple cartoon eyes and mouths. Webtoon-style expressions.
 """,
         "역사": """
 [Core Identity]
 - Character: "White circle-faced stickman" with PURE WHITE body and limbs.
-- Face Style: Minimalist white round head with **SIMPLE BLACK DOT EYES**.
-- **Shape Rule:** The face must ALWAYS be a perfect circle.
+- Face Style: Minimalist white round head with simple cartoon eyes and mouth.
 
-[Face & Expression Guide - Comic & Clean]
-- **Style:** "Cute", "Clean", "Iconic", "Webtoon-style".
-- **Eye Style:** Simple Black Dots.
+[Background Variety Rule (Context-Based)]
+- **DO NOT always draw a palace.** Analyze the script to choose the setting:
+    - *War/Battle:* Burning battlefield, siege walls, army camps.
+    - *Royal/Palace:* Throne room with golden decorations, royal garden.
+    - *Village/Common:* Rustic village, marketplace, farm fields.
+    - *Ancient Ruins:* Crumbling temples, overgrown monuments.
 
-[How to Express Negative Emotions (Descriptive Only)]
-- **Depressed/Tired:** Use **"Vertical gloom lines drawn on the upper face"** or **"Blue face shading"**.
-- **Angry/Sharp:** Use **"Sharp slanted eyebrows"** over dot eyes.
-- **Shocked:** Use **"Tiny dot pupils"** or **"White blank eyes"**.
-- **Confused/Troubled:** Use a **"Large sweat drop on the side of the head"**.
+[Text Object Integration (Make text part of the world)]
+- **DO NOT just float text in air.** Integrate it into objects:
+    - *Official:* Text on **"Flags/Banners"**, **"Royal Seals"**, **"Scrolls"**.
+    - *Monument:* Text carved on **"Stone Tablets"**, **"Tomb Markers"**.
+    - *Battle:* Text on **"War Flags"**, **"Shield Emblems"**.
 
 [Costume & Role - 역사 의상]
 - 조선: 한복, 갓 / 로마: 토가, 갑옷 / 중세: 갑옷, 왕관, 드레스
 - 왕족: 금색 장식, 왕관 / 농민: 소박한 옷 / 전사: 무기와 갑옷
 
-[Background & Text]
-- Lighting: "Candlelight Warm", "Royal Gold", "Battle Red", "Dawn Light"
-- Text: 깃발, 두루마리 문서, 석비 등에 핵심 한국어 키워드 배치
+[Face Expression]
+- Use simple cartoon eyes and mouths. Webtoon-style expressions.
 """,
         "과학": """
 [Core Identity]
 - Character: "White circle-faced stickman" with PURE WHITE body and limbs.
-- Face Style: Minimalist white round head with **SIMPLE BLACK DOT EYES**.
-- **Shape Rule:** The face must ALWAYS be a perfect circle.
+- Face Style: Minimalist white round head with simple cartoon eyes and mouth.
 
-[Face & Expression Guide - Comic & Clean]
-- **Style:** "Cute", "Clean", "Iconic", "Webtoon-style".
-- **Eye Style:** Simple Black Dots.
+[Background Variety Rule (Context-Based)]
+- **DO NOT always draw a lab.** Analyze the script to choose the setting:
+    - *Lab/Research:* Clean white laboratory, microscope tables, beakers.
+    - *Space:* Starry cosmos, spaceship interior, planet surface.
+    - *Tech/Cyber:* Data center with servers, futuristic city, hologram room.
+    - *Medical:* Hospital room, surgery theater, medical charts.
 
-[How to Express Negative Emotions (Descriptive Only)]
-- **Depressed/Tired:** Use **"Vertical gloom lines drawn on the upper face"** or **"Blue face shading"**.
-- **Angry/Sharp:** Use **"Sharp slanted eyebrows"** over dot eyes.
-- **Shocked:** Use **"Tiny dot pupils"** or **"White blank eyes"**.
-- **Confused/Troubled:** Use a **"Large sweat drop on the side of the head"**.
+[Text Object Integration (Make text part of the world)]
+- **DO NOT just float text in air.** Integrate it into objects:
+    - *Tech:* Text as **"Floating HUD/UI Interface"**, **"Hologram Display"**.
+    - *Lab:* Text on **"Computer Monitor"**, **"Equipment Labels"**, **"Beaker Tags"**.
+    - *Space:* Text as **"Spaceship Console Screen"**, **"Laser Projection"**.
 
 [Costume & Role - 과학 의상]
 - 과학자: 흰 가운, 보안경 / 의사: 수술복, 청진기
 - 우주비행사: 우주복 / 엔지니어: 작업복, 안전모
 
-[Background & Text]
-- Lighting: "Lab White", "Neon Cyber", "Space Purple", "Hologram Blue"
-- Text: 홀로그램 디스플레이, 모니터 화면에 핵심 한국어 키워드 배치
+[Face Expression]
+- Use simple cartoon eyes and mouths. Webtoon-style expressions.
 """,
         "커스텀 (직접 입력)": """
 [Core Identity]
 - Character: "White circle-faced stickman" with PURE WHITE body and limbs.
-- Face Style: Minimalist white round head with **SIMPLE BLACK DOT EYES**.
-- **Shape Rule:** The face must ALWAYS be a perfect circle.
+- Face Style: Minimalist white round head with simple cartoon eyes and mouth.
 
-[Face & Expression Guide - Comic & Clean]
-- **Style:** "Cute", "Clean", "Iconic", "Webtoon-style".
-- **Eye Style:** Simple Black Dots.
+[Background Variety Rule (Context-Based)]
+- **DO NOT always use the same background.** Analyze the script to choose the setting:
+    - *News/Fact:* Bright TV News Studio, Press Conference Room.
+    - *Despair/Ruin:* Dark crumbled ruins, stormy alleyway.
+    - *Success/Hope:* Golden stage with spotlight, warm room.
+    - *Business:* Modern meeting room, handshake scene.
 
-[How to Express Negative Emotions (Descriptive Only)]
-- **Depressed/Tired:** Use **"Vertical gloom lines drawn on the upper face"** or **"Blue face shading"**.
-- **Angry/Sharp:** Use **"Sharp slanted eyebrows"** over dot eyes.
-- **Shocked:** Use **"Tiny dot pupils"** or **"White blank eyes"**.
-- **Confused/Troubled:** Use a **"Large sweat drop on the side of the head"**.
+[Text Object Integration (Make text part of the world)]
+- **DO NOT just float text in air.** Integrate it into objects:
+    - *News:* Text on **"TV Screen"** or **"News Banner"**.
+    - *Business:* Text on **"Presentation Slide"**, **"Chart"**, **"Shirt Labels"**.
+    - *Atmosphere:* Text as **"Neon Sign"**, **"Graffiti"**, **"Hologram"**.
 
 [Costume & Role]
 - 각 캐릭터의 직업/역할에 맞는 컬러풀하고 특징적인 의상
 
-[Background & Text]
-- Lighting: "Golden Amber", "Neon Pink", "Cold Blue", "Dramatic Spotlight"
-- Text: 핵심 한국어 키워드 2-3개를 네온사인, 간판, 홀로그램 등으로 배치
+[Face Expression]
+- Use simple cartoon eyes and mouths. Webtoon-style expressions.
 """
     }
 
