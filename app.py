@@ -1241,8 +1241,8 @@ if split_btn:
             st.session_state['split_scenes'] = split_text_automatically(preview_client, script_input, target_chars=scene_duration)
         st.success(f"✅ 총 {len(st.session_state['split_scenes'])}개 씬으로 분할되었습니다.")
 
-# [분할된 씬 표시] - 전체 열기/닫기 기능 포함
-if st.session_state.get('split_scenes'):
+# [분할된 씬 표시] - 전체 열기/닫기 기능 포함 (이미지 생성 전에만 표시)
+if st.session_state.get('split_scenes') and not st.session_state.get('generated_results'):
     col_title, col_btns = st.columns([3, 1])
     with col_title:
         st.subheader("🎬 씬 분할 결과")
@@ -1466,7 +1466,6 @@ if st.session_state['generated_results']:
 
     # TTS 전체 생성
     with c_btn2:
-        tts_batch_mode = st.selectbox("TTS 생성 모드", ["원본 음성 생성", "무음 조절 음성 (최대 0.3초)"], help="무음 조절 선택 시 공백 자동 축소")
         if st.button("🔊 TTS 일괄 생성", use_container_width=True):
             if not supertone_api_key or not selected_voice_id:
                 st.error("사이드바에서 API Key와 목소리를 설정해주세요.")
@@ -1479,8 +1478,8 @@ if st.session_state['generated_results']:
 
                 status_box = st.status("🎙️ TTS 일괄 생성 중...", expanded=True)
                 progress_bar = status_box.progress(0)
-                
-                apply_trim = (tts_batch_mode == "무음 조절 음성 (최대 0.3초)")
+
+                apply_trim = False  # 원본 음성 생성 모드 고정
                 total_files = len(st.session_state['generated_results'])
                 completed_cnt = 0
                 
