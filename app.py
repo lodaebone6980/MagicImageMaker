@@ -281,6 +281,71 @@ def parse_numbered_script(script):
 
     return scenes
 
+# ==========================================
+# [UPGRADE] 함수: AI 기반 대본 맥락 분할
+# ==========================================
+def split_text_automatically(client, full_text, target_chars=200):
+    """
+    Gemini를 이용해 문맥(Context)을 파악하고,
+    시각적 장면 전환이 필요한 지점마다 대본을 분할합니다.
+    (기준은 약 150~200자이지만, 문맥을 최우선으로 고려)
+    """
+    prompt = f"""
+    [Role]
+    You are a professional Video Editor and Storyboard Artist.
+
+    [Task]
+    Split the provided [Script] into multiple "Scenes" for image generation.
+
+    [Rules]
+    1. **Context First:** Read the entire context. Split the text where the visual scene, topic, or mood changes.
+    2. **Length Guideline:** Aim for each scene to be roughly **{target_chars} characters** (approx. 20-40 seconds).
+       - However, DO NOT break a sentence in the middle.
+       - If a topic is long, split it into logical parts.
+       - If a topic is short but distinct, keep it as a separate scene.
+    3. **Output Format:** Return ONLY a raw JSON list of strings. No markdown, no "```json".
+       - Example: ["First scene text...", "Second scene text...", "Third scene text..."]
+
+    [Script]
+    {full_text}
+    """
+
+    try:
+        response = client.models.generate_content(
+            model=GEMINI_TEXT_MODEL_NAME,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"  # JSON 강제 출력
+            )
+        )
+
+        # JSON 파싱
+        scenes = json.loads(response.text)
+
+        # 만약 리스트가 아니라면(혹시 모를 에러 대비) 강제 리스트 변환
+        if isinstance(scenes, list):
+            return [s.strip() for s in scenes if s.strip()]
+        else:
+            # 구조가 다르면 단순 줄바꿈 분할로 대체 (Fallback)
+            return [s.strip() for s in full_text.split('\n') if s.strip()]
+
+    except Exception as e:
+        print(f"AI Split Error: {e}")
+        # API 에러 발생 시 기존의 단순 규칙 기반 분할로 대체 (안전장치)
+        import re
+        sentences = re.split(r'(?<=[.?!])\s+', full_text.strip())
+        scenes = []
+        current_chunk = ""
+        for sentence in sentences:
+            if not sentence.strip(): continue
+            if len(current_chunk) + len(sentence) > target_chars:
+                if current_chunk: scenes.append(current_chunk.strip())
+                current_chunk = sentence
+            else:
+                current_chunk += " " + sentence
+        if current_chunk: scenes.append(current_chunk.strip())
+        return scenes
+
 def make_filename(scene_num, text_chunk):
     clean_line = text_chunk.replace("\n", " ").strip()
     clean_line = re.sub(r'[\\/:*?"<>|]', "", clean_line)
@@ -315,10 +380,10 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
     else:
         lang_guide = f"화면 속 핵심 키워드는 무조건 '{target_language}'로 표기하십시오."
 
-    # 2. [중요] Suffix - 장면 구성, 배경, 텍스트의 상황 인식 다양성 강조 + 깔끔한 테두리
-    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, simple lines, and flat vivid colors. **All text has a clean and distinct outline for readability.**"
+    # 2. [중요] Suffix - 밝은 조명 + 텍스트 2-3개 제한 강조
+    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, simple lines, and flat vivid colors. **Lighting is bright and clear. Text is limited to 2-3 core keywords with distinct outlines.**"
 
-    # 3. 프롬프트 작성 지침 (Gems 공식 + 상황별 배경/엑스트라/텍스트 가이드)
+    # 3. 프롬프트 작성 지침 (Gems 공식 + 밝은 조명 + 키워드 제한)
     full_instruction = f"""
 [Role]
 You are a '2D Stickman Animation Prompt Director'.
@@ -329,37 +394,37 @@ You are a '2D Stickman Animation Prompt Director'.
 [Style Guide]
 {style_instruction}
 
-[GUIDE: Context-Aware Visual Guide (Crucial)]
-Analyze the script's scenario and apply the corresponding visual elements:
+[GUIDE: Lighting & Text Constraint]
+1. **Lighting Rule:** Make the scene **BRIGHT and VISIBLE**.
+   - Avoid "Darkness" or "Pitch Black Night" unless absolutely necessary.
+   - Even for sad scenes, use "Grey cloudy day" or "Dim room with visible details" instead of pitch black.
+   - Use keywords: "Bright Daylight", "Soft Studio Light", "Clean White Background", "Warm Golden Light".
 
-1. **Scenario: Business/Partnership (e.g., M&A, Deals, Handshakes)**
-   - **Background:** Bright conference room, stage with handshake, modern office with glass windows.
-   - **Extras:** A few other stickmen (reporters with microphones, investors in suits) in the background.
-   - **Text Integration:** Place text on **podiums**, **company flags**, **shirt labels (name tags)**, or **large presentation screens**.
+2. **Text Constraint:** Select **EXACTLY 2 or 3** most important keywords from the script.
+   - Do NOT write full sentences.
+   - Do NOT add too many labels. Just the core concepts.
+   - Text must have a **CLEAN OUTLINE** for readability.
 
-2. **Scenario: Economic Crisis/Failure (e.g., Collapse, Despair, Bankruptcy)**
-   - **Background:** Dark, crumbling city ruins, stormy alley, broken office with scattered papers.
-   - **Extras:** Usually solo, or with a few shadowy, sad stickmen figures in the distance.
-   - **Text Integration:** Place text on **broken neon signs**, **cracked walls**, **graffiti**, or **scattered papers on the ground**.
+[Context-Aware Visual Guide (Crucial)]
+1. **Scenario: Business/Partnership**
+   - **Background:** Bright conference room, sunny stage with handshake, modern office.
+   - **Extras:** A few other stickmen (reporters, investors) in the background.
+   - **Text Integration:** Place text on **podiums**, **company flags**, **shirt labels**, or **presentation screens**.
 
-3. **Scenario: Market/Public Reaction (e.g., Trends, Opinions, Protests)**
-   - **Background:** Public spaces like busy streets, stock market trading floors, or online community screens.
-   - **Extras:** **Crowd of anonymous stickmen** showing reactions (angry faces, confused expressions, cheering poses).
-   - **Text Integration:** Text on **protest signs held by crowd**, **thought bubbles above crowds**, **stock ticker boards**.
+2. **Scenario: Economic Crisis/Failure**
+   - **Background:** Grey cloudy city, dim office (NOT pitch black), rainy street with visible sky.
+   - **Extras:** Usually solo, or with a few sad figures in the distance.
+   - **Text Integration:** Place text on **broken neon signs**, **cracked walls**, **graffiti**.
 
-4. **Scenario: News/Announcement (e.g., Breaking News, Reports)**
-   - **Background:** Cozy living room with TV, or a professional news studio desk.
+3. **Scenario: Market/Public Reaction**
+   - **Background:** Bright public spaces, busy streets, stock market floors.
+   - **Extras:** **Crowd of anonymous stickmen** showing reactions.
+   - **Text Integration:** Text on **protest signs**, **thought bubbles**, **stock ticker boards**.
+
+4. **Scenario: News/Announcement**
+   - **Background:** Bright living room with TV, or well-lit news studio desk.
    - **Extras:** None (focus on TV) or a news anchor stickman at desk.
-   - **Text Integration:** Text inside a **"Breaking News" banner on a TV screen**, or on **news ticker at bottom**.
-
-[GUIDE: How to Create Readable & Sleek Text]
-When describing glowing text or neon signs, add a description of its **OUTLINE**.
-**Avoid making the outline too thick.** Keep it **clean and sharp**.
-
-- ❌ "A neon sign with a huge thick border." (Too clunky)
-- ✅ "A glowing neon sign with a **clean black outline**." (Perfect)
-- ✅ "Text '성공' written in **distinct, bordered neon letters**."
-- ✅ "A hologram text with a **sharp glowing border**."
+   - **Text Integration:** Text inside a **"Breaking News" banner on a TV screen**.
 
 [CRITICAL RULE - POSE & FACE DETAILS]
 1. **If the character is sitting:** Describe the limbs specifically. (e.g., "Sitting with knees bent", "Arms resting on knees").
@@ -370,11 +435,11 @@ When describing glowing text or neon signs, add a description of its **OUTLINE**
 Write the prompt in **Korean** in this order:
 
 1. **[Camera Angle & Shot]**: "와이드 샷" (군중/대규모 장소) 또는 "미디엄 샷" (개인/감정 장면)
-2. **[Setting the Scene - Background & Context]**: **대본에 맞는 구체적인 배경 묘사 (밝은 회의실, 어두운 폐허, 북적이는 거리 등)**
+2. **[Setting the Scene - Background & Context]**: **대본에 맞는 구체적인 배경 묘사. 반드시 밝게! (밝은 회의실, 회색 흐린 하늘, 밝은 거리 등)**
 3. **[Main Character(s) & Action]**: "하얀 원형 얼굴의 스틱맨" + 행동, 의상, **눈**과 **입** 묘사, 필요시 **옷에 이름표** 묘사
-4. **[Extras/Crowd Composition]**: **(핵심)** 배경의 엑스트라 스틱맨들 묘사 (기자들, 분노한 군중, 슬픈 그림자 인물 등) - 없으면 "없음"
-5. **[Text Object Integration]**: {lang_guide} **핵심: 텍스트가 어떤 물체 위에 있는지 + 'CLEAN OUTLINE' 또는 'SHARP BORDER' 명시**. 키워드 2-3개 선택
-6. **[Lighting & Mood]**: "Golden Amber", "Dark Stormy", "Clean White", "Neon Glow" 등 분위기에 맞는 조명
+4. **[Extras/Crowd Composition]**: 배경의 엑스트라 스틱맨들 묘사 (기자들, 군중, 그림자 인물 등) - 없으면 "없음"
+5. **[Text Object Integration]**: {lang_guide} **딱 2-3개 핵심 키워드만 선택! + 텍스트가 어떤 물체 위에 있는지 + 'CLEAN OUTLINE' 명시**
+6. **[Lighting & Color]**: "Bright White", "Golden Amber", "Soft Blue", "Grey Cloudy" 등 **무조건 밝게!**
 
 [Constraint]
 - 순수 텍스트만 출력 (마크다운 금지)
@@ -828,17 +893,23 @@ with st.sidebar:
 - Face Style: Minimalist white round head with eyes and mouth.
 - **Critical Rule:** Character MUST have EYES and MOUTH.
 
-[Context-Aware Visual Guide (Crucial)]
-Analyze the script's scenario and apply the corresponding visual elements:
+[Lighting & Background Guide - BRIGHT & CLEAR]
+- **General Tone:** ALWAYS use **Bright, Clear, and Visible** lighting.
+- **Avoid:** Pitch black darkness, heavy shadows, or muddy colors.
+- **Scenario Lighting:**
+    - *Success/Business:* "Bright White Studio", "Sunny Day", "Warm Golden Light".
+    - *Crisis/Sadness:* "Grey Cloudy Daylight", "Dim Indoor Light" (NOT pitch black), "Cold Blue Tint" (keep it bright enough to see).
+    - *News:* "Bright TV Studio Lighting".
 
+[Context-Aware Visual Guide (Crucial)]
 1. **Scenario: Business/Partnership (e.g., M&A, Deals)**
    - **Background:** Bright conference room, stage with handshake, modern office.
    - **Extras:** A few other stickmen (reporters, investors) in the background.
    - **Text Integration:** Place text on **podiums**, **company flags**, **shirt labels**, or **large presentation screens**.
 
 2. **Scenario: Economic Crisis/Failure (e.g., Collapse, Despair)**
-   - **Background:** Dark, crumbling city ruins, stormy alley, broken offices.
-   - **Extras:** Usually solo, or with a few shadowy, sad figures in the distance.
+   - **Background:** Grey cloudy city, dim office, rainy street (NOT pitch black).
+   - **Extras:** Usually solo, or with a few sad figures in the distance.
    - **Text Integration:** Place text on **broken neon signs**, **cracked walls**, **graffiti**, or **scattered papers**.
 
 3. **Scenario: Market/Public Reaction (e.g., Trends, Opinions)**
@@ -847,17 +918,14 @@ Analyze the script's scenario and apply the corresponding visual elements:
    - **Text Integration:** Text on **protest signs**, **thought bubbles above crowds**, **stock ticker boards**.
 
 4. **Scenario: News/Announcement**
-   - **Background:** Cozy living room with TV, or a news studio desk.
+   - **Background:** Cozy living room with TV, or a bright news studio desk.
    - **Extras:** None (focus on TV) or a news anchor.
    - **Text Integration:** Text inside a **"Breaking News" banner on a TV screen**.
 
-[Text Object Integration (Readable & Aesthetic)]
-- **CRITICAL TEXT RULE:** All neon signs or glowing text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
-- **Avoid making the outline too thick or clunky.** Keep it sleek.
-- **How to describe Neon Text:**
-    - "A glowing neon sign with a **clean black outline**."
-    - "Text written in **distinct, bordered neon letters**."
-    - "A **glowing outline text** floating in the air."
+[Text Object Integration (Limit 2-3 Keywords)]
+- **QUANTITY RULE:** Strictly limit text to **2-3 CORE KEYWORDS** per scene. Do not use long sentences or too many tags.
+- **Readability:** Text must have a **CLEAN OUTLINE**.
+- **Placement:** Text on TV Screen, Presentation Slide, Labels on Shirt, Neon Sign with clean border.
 
 [Costume & Role]
 - CEO: 네이비 정장, 빨간 넥타이 / 가난한 사람: 낡은 회색 가디건
@@ -872,35 +940,39 @@ Analyze the script's scenario and apply the corresponding visual elements:
 - Face Style: Minimalist white round head with eyes and mouth.
 - **Critical Rule:** Character MUST have EYES and MOUTH.
 
-[Context-Aware Visual Guide (Crucial)]
-Analyze the script's scenario and apply the corresponding visual elements:
+[Lighting & Background Guide - BRIGHT & CLEAR]
+- **General Tone:** ALWAYS use **Bright, Clear, and Visible** lighting.
+- **Avoid:** Pitch black darkness, heavy shadows, or muddy colors.
+- **Scenario Lighting:**
+    - *Victory/Coronation:* "Bright Golden Sunlight", "Warm Throne Room Light".
+    - *Battle/War:* "Smoky but Visible Daylight", "Orange Firelight" (NOT pitch black).
+    - *Tragedy:* "Grey Cloudy Sky", "Dim Candlelight" (keep it bright enough to see).
 
+[Context-Aware Visual Guide (Crucial)]
 1. **Scenario: War/Battle**
-   - **Background:** Burning battlefield, siege walls, army camps.
+   - **Background:** Smoky battlefield with visible sky, siege walls, army camps.
    - **Extras:** **Army of stickmen soldiers** in the background, fallen warriors.
    - **Text Integration:** Text on **war flags**, **shield emblems**, **banners**.
 
 2. **Scenario: Royal/Palace**
-   - **Background:** Throne room with golden decorations, royal garden.
+   - **Background:** Bright throne room with golden decorations, sunny royal garden.
    - **Extras:** Servants, guards, nobles in the background.
    - **Text Integration:** Text on **royal seals**, **scrolls**, **throne inscriptions**.
 
 3. **Scenario: Revolution/Uprising**
-   - **Background:** Town square, burning buildings, palace gates.
+   - **Background:** Town square at dusk (visible), palace gates with torchlight.
    - **Extras:** **Angry crowd of stickmen** with torches and pitchforks.
    - **Text Integration:** Text on **protest banners**, **wanted posters**, **graffiti on walls**.
 
 4. **Scenario: Historical Event/Moment**
-   - **Background:** Iconic historical setting (e.g., signing ceremony, coronation).
+   - **Background:** Iconic historical setting with clear lighting (signing ceremony, coronation).
    - **Extras:** Witnesses, historians, important figures.
    - **Text Integration:** Text on **documents**, **stone tablets**, **flags**.
 
-[Text Object Integration (Readable & Aesthetic)]
-- **CRITICAL TEXT RULE:** All text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
-- **Avoid making the outline too thick or clunky.** Keep it sleek.
-- **How to describe Text:**
-    - "A banner with **clean bordered text**."
-    - "Text carved on stone with **distinct, sharp edges**."
+[Text Object Integration (Limit 2-3 Keywords)]
+- **QUANTITY RULE:** Strictly limit text to **2-3 CORE KEYWORDS** per scene. Do not use long sentences or too many tags.
+- **Readability:** Text must have a **CLEAN OUTLINE**.
+- **Placement:** Text on Banners, Royal Seals, Stone Tablets, War Flags.
 
 [Costume & Role - 역사 의상]
 - 조선: 한복, 갓 / 로마: 토가, 갑옷 / 중세: 갑옷, 왕관, 드레스
@@ -915,35 +987,39 @@ Analyze the script's scenario and apply the corresponding visual elements:
 - Face Style: Minimalist white round head with eyes and mouth.
 - **Critical Rule:** Character MUST have EYES and MOUTH.
 
-[Context-Aware Visual Guide (Crucial)]
-Analyze the script's scenario and apply the corresponding visual elements:
+[Lighting & Background Guide - BRIGHT & CLEAR]
+- **General Tone:** ALWAYS use **Bright, Clear, and Visible** lighting.
+- **Avoid:** Pitch black darkness, heavy shadows, or muddy colors.
+- **Scenario Lighting:**
+    - *Lab/Research:* "Bright White Lab Lighting", "Clean Fluorescent Light".
+    - *Space:* "Starry but Visible Space", "Bright Spaceship Interior" (NOT pitch black void).
+    - *Disaster:* "Red Warning Lights with Visible Background", "Smoky but Lit Lab".
 
+[Context-Aware Visual Guide (Crucial)]
 1. **Scenario: Discovery/Breakthrough**
-   - **Background:** Clean laboratory, research facility, eureka moment setting.
+   - **Background:** Bright clean laboratory, research facility, eureka moment setting.
    - **Extras:** Research team stickmen celebrating or observing.
    - **Text Integration:** Text on **computer monitors**, **hologram displays**, **scientific charts**.
 
 2. **Scenario: Space/Exploration**
-   - **Background:** Starry cosmos, spaceship interior, alien planet surface.
+   - **Background:** Starry cosmos with visible elements, bright spaceship interior, alien planet with clear sky.
    - **Extras:** Astronaut crew, mission control stickmen on screens.
    - **Text Integration:** Text on **spaceship consoles**, **mission patches**, **floating HUD**.
 
 3. **Scenario: Disaster/Failure**
-   - **Background:** Exploding lab, malfunctioning equipment, warning lights.
+   - **Background:** Lab with warning lights (visible), malfunctioning equipment, smoky but lit scene.
    - **Extras:** Panicking scientists, evacuation scenes.
    - **Text Integration:** Text on **warning signs**, **error screens**, **scattered papers**.
 
 4. **Scenario: Future/Technology**
-   - **Background:** Futuristic city, cyber world, high-tech facility.
+   - **Background:** Bright futuristic city, glowing cyber world, well-lit high-tech facility.
    - **Extras:** Robots, AI interfaces, holographic beings.
    - **Text Integration:** Text as **hologram UI**, **laser projections**, **digital billboards**.
 
-[Text Object Integration (Readable & Aesthetic)]
-- **CRITICAL TEXT RULE:** All hologram or glowing text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
-- **Avoid making the outline too thick or clunky.** Keep it sleek.
-- **How to describe Text:**
-    - "A hologram text with a **sharp glowing border**."
-    - "Digital display with **clean, distinct letters**."
+[Text Object Integration (Limit 2-3 Keywords)]
+- **QUANTITY RULE:** Strictly limit text to **2-3 CORE KEYWORDS** per scene. Do not use long sentences or too many tags.
+- **Readability:** Text must have a **CLEAN OUTLINE**.
+- **Placement:** Text on Computer Monitors, Hologram UI, Digital Billboards, Warning Signs.
 
 [Costume & Role - 과학 의상]
 - 과학자: 흰 가운, 보안경 / 의사: 수술복, 청진기
@@ -958,35 +1034,39 @@ Analyze the script's scenario and apply the corresponding visual elements:
 - Face Style: Minimalist white round head with eyes and mouth.
 - **Critical Rule:** Character MUST have EYES and MOUTH.
 
-[Context-Aware Visual Guide (Crucial)]
-Analyze the script's scenario and apply the corresponding visual elements:
+[Lighting & Background Guide - BRIGHT & CLEAR]
+- **General Tone:** ALWAYS use **Bright, Clear, and Visible** lighting.
+- **Avoid:** Pitch black darkness, heavy shadows, or muddy colors.
+- **Scenario Lighting:**
+    - *Positive/Success:* "Bright White Studio", "Sunny Day", "Warm Golden Light".
+    - *Negative/Sad:* "Grey Cloudy Daylight", "Dim Indoor Light" (NOT pitch black).
+    - *News:* "Bright TV Studio Lighting".
 
+[Context-Aware Visual Guide (Crucial)]
 1. **Scenario: Business/Partnership**
-   - **Background:** Conference room, stage, modern office.
+   - **Background:** Bright conference room, stage, modern office.
    - **Extras:** Other stickmen (reporters, investors) in the background.
    - **Text Integration:** Text on **podiums**, **flags**, **shirt labels**, **screens**.
 
 2. **Scenario: Crisis/Failure**
-   - **Background:** Dark ruins, stormy alley, broken offices.
-   - **Extras:** Solo, or with shadowy figures in the distance.
+   - **Background:** Grey cloudy scene, dim office, rainy street (NOT pitch black).
+   - **Extras:** Solo, or with sad figures in the distance.
    - **Text Integration:** Text on **broken signs**, **cracked walls**, **graffiti**.
 
 3. **Scenario: Public Reaction**
-   - **Background:** Public spaces, streets, gathering places.
+   - **Background:** Bright public spaces, streets, gathering places.
    - **Extras:** **Crowd of stickmen** showing reactions.
    - **Text Integration:** Text on **signs**, **thought bubbles**, **ticker boards**.
 
 4. **Scenario: News/Announcement**
-   - **Background:** Living room with TV, or news studio.
+   - **Background:** Bright living room with TV, or well-lit news studio.
    - **Extras:** None or news anchor.
    - **Text Integration:** Text on **TV screen banner**.
 
-[Text Object Integration (Readable & Aesthetic)]
-- **CRITICAL TEXT RULE:** All neon signs or glowing text MUST have a **CLEAN and DISTINCT OUTLINE** to ensure readability.
-- **Avoid making the outline too thick or clunky.** Keep it sleek.
-- **How to describe Text:**
-    - "A glowing neon sign with a **clean black outline**."
-    - "Text written in **distinct, bordered letters**."
+[Text Object Integration (Limit 2-3 Keywords)]
+- **QUANTITY RULE:** Strictly limit text to **2-3 CORE KEYWORDS** per scene. Do not use long sentences or too many tags.
+- **Readability:** Text must have a **CLEAN OUTLINE**.
+- **Placement:** Text on TV Screen, Signs, Banners, Shirt Labels.
 
 [Costume & Role]
 - 각 캐릭터의 직업/역할에 맞는 컬러풀하고 특징적인 의상
@@ -1136,80 +1216,139 @@ if 'section_scripts' in st.session_state and st.session_state['section_scripts']
             st.session_state["image_gen_input"] = main_text_acc.strip()
             st.rerun()
 
-script_input = st.text_area(
-    "📜 번호로 분할된 대본 입력 (1. 2. 3. 형태)",
-    height=300,
-    placeholder="""예시:
-1.하지만 영원할 것 같았던
-이 거대한 제국은 어느 순간부터
-거리에 하나둘씩 간판을 내리기 시작하더니
-마치 신기루처럼 사라져버렸습니다
+# ==========================================
+# [UI] 메인 화면: 대본 입력 및 AI 씬 분할
+# ==========================================
+st.divider()
+st.subheader("📜 대본 입력 (AI 자동 분할)")
+st.caption("대본 전체를 복사해서 붙여넣으세요. AI가 문맥에 맞춰 자동으로 씬을 나눠줍니다.")
 
-2.오백 개가 넘는 매장이
-순식간에 증발해 버린 진짜 이유는,
-외부의 적이 아닌 내부의 가족,
-바로 부부의 전쟁 때문이었습니다
+col_input_opt, col_input_txt = st.columns([1, 3])
 
-3.한때 대한민국 요식업 프랜차이즈의 신화였으나
-지금은 오너 리스크의 가장 끔찍한 교과서로 남게 된
-비운의 브랜드...""",
-    key="image_gen_input"
-)
+with col_input_opt:
+    st.info("⏱️ 씬 분할 설정")
+    scene_duration = st.slider(
+        "한 씬당 목표 글자수",
+        min_value=100,
+        max_value=300,
+        value=200,
+        step=10,
+        help="AI가 문맥을 파악하여 이 길이 근처에서 씬을 나눕니다. 문장 중간에 끊기지 않습니다."
+    )
+    st.caption(f"약 {scene_duration}자 = 약 {scene_duration // 6}초 분량")
 
+with col_input_txt:
+    script_input = st.text_area(
+        "전체 대본 붙여넣기",
+        height=300,
+        placeholder="대본을 그대로 붙여넣으세요. AI가 문맥을 파악해 자동으로 씬을 나눕니다.\n\n예시:\n안녕하세요. 오늘은 경제 위기에 대해 이야기해보려 합니다. 최근 뉴스를 보면 많은 기업들이 어려움을 겪고 있습니다. 하지만 위기 속에서도 기회를 찾는 사람들이 있죠. 이런 상황에서 우리는 어떻게 해야 할까요?",
+        key="image_gen_input"
+    )
+
+# 세션 상태 초기화
 if 'generated_results' not in st.session_state:
     st.session_state['generated_results'] = []
 if 'is_processing' not in st.session_state:
     st.session_state['is_processing'] = False
+if 'split_scenes' not in st.session_state:
+    st.session_state['split_scenes'] = []
 
-# [KEY FIX] 버튼 클릭 시 결과물 초기화 함수 추가
-def clear_generated_results():
-    st.session_state['generated_results'] = []
+# ==========================================
+# [NEW] 씬 분할 미리보기 (이미지 생성 전 확인)
+# ==========================================
+col_split_btn, col_gen_btn = st.columns(2)
 
-start_btn = st.button("🚀 이미지 생성 시작", type="primary", width="stretch", on_click=clear_generated_results)
+with col_split_btn:
+    split_btn = st.button("✂️ 씬 분할 미리보기", type="secondary", use_container_width=True)
 
+with col_gen_btn:
+    def clear_generated_results():
+        st.session_state['generated_results'] = []
+    start_btn = st.button("🚀 이미지 생성 시작", type="primary", use_container_width=True, on_click=clear_generated_results)
+
+# [씬 분할 미리보기 처리]
+if split_btn:
+    if not api_key:
+        st.error("⚠️ Google API Key를 입력해주세요.")
+    elif not script_input:
+        st.warning("⚠️ 대본을 입력해주세요.")
+    else:
+        with st.spinner("🧠 AI가 대본을 분석하여 씬을 나누는 중..."):
+            preview_client = genai.Client(api_key=api_key)
+            st.session_state['split_scenes'] = split_text_automatically(preview_client, script_input, target_chars=scene_duration)
+        st.success(f"✅ 총 {len(st.session_state['split_scenes'])}개 씬으로 분할되었습니다.")
+
+# [분할된 씬 표시]
+if st.session_state.get('split_scenes'):
+    st.subheader("🎬 씬 분할 결과 (미리보기)")
+    for idx, scene_text in enumerate(st.session_state['split_scenes']):
+        with st.expander(f"Scene {idx + 1} ({len(scene_text)}자)", expanded=False):
+            st.text_area(
+                f"씬 {idx + 1} 대본",
+                value=scene_text,
+                height=100,
+                key=f"scene_preview_{idx}",
+                disabled=True
+            )
+
+st.divider()
+
+# [이미지 생성 처리]
 if start_btn:
     if not api_key:
         st.error("⚠️ Google API Key를 입력해주세요.")
     elif not script_input:
         st.warning("⚠️ 대본을 입력해주세요.")
     else:
-        # [FIX] 기존 결과 확실히 날리기
-        st.session_state['generated_results'] = [] 
+        # 기존 결과 초기화
+        st.session_state['generated_results'] = []
         st.session_state['is_processing'] = True
-        
-        # [FIX] 기존 이미지 파일들 물리적으로 삭제 (찌꺼기 제거)
+
+        # 기존 이미지 파일들 물리적으로 삭제
         if os.path.exists(IMAGE_OUTPUT_DIR):
-            shutil.rmtree(IMAGE_OUTPUT_DIR) # 폴더 통째로 삭제
-        init_folders() # 다시 깨끗한 폴더 생성
-        
+            shutil.rmtree(IMAGE_OUTPUT_DIR)
+        init_folders()
+
         # [멀티 API 지원] 여러 클라이언트 생성
         clients = []
         for key in api_keys:
             clients.append(genai.Client(api_key=key))
 
-        # 호환성을 위해 첫 번째 클라이언트를 client로도 저장
+        # 메인 클라이언트 (AI 분할용)
         client = clients[0] if clients else genai.Client(api_key=api_key)
 
         status_box = st.status("작업 진행 중...", expanded=True)
         progress_bar = st.progress(0)
 
-        # 1. 대본 분할 (번호 기반)
-        status_box.write(f"✂️ 번호(1. 2. 3.)로 분할된 대본 파싱 중...")
-        chunks = parse_numbered_script(script_input)
+        # -------------------------------------------------------
+        # [핵심] AI가 문맥을 파악하여 씬 분할
+        # -------------------------------------------------------
+        status_box.write(f"🧠 AI가 대본 전체 맥락을 읽고 씬을 나누는 중입니다... (기준: 약 {scene_duration}자)")
+
+        # [변경점] client 인자 추가
+        chunks = split_text_automatically(client, script_input, target_chars=scene_duration)
         total_scenes = len(chunks)
 
         if total_scenes == 0:
-            status_box.update(label="⚠️ 번호로 분할된 씬을 찾을 수 없습니다. (예: 1.내용 2.내용)", state="error")
+            status_box.update(label="⚠️ 분할 실패.", state="error")
             st.stop()
 
-        status_box.write(f"✅ {total_scenes}개 씬으로 파싱 완료.")
+        status_box.write(f"✅ AI 분석 완료: 총 {total_scenes}개의 장면으로 구성되었습니다.")
 
+        # 분할된 내용 미리보기
+        with st.expander("🔍 분할된 씬 내용 확인하기", expanded=False):
+            for idx, chunk in enumerate(chunks):
+                st.caption(f"**Scene {idx+1}** ({len(chunk)}자): {chunk[:80]}...")
+
+        # [맥락 주입] 영상 제목이 없다면 첫 문장으로 대체
         current_video_title = st.session_state.get('video_title', "").strip()
         if not current_video_title:
-            current_video_title = "전반적인 대본 분위기에 어울리는 배경 (Context based on the script)"
+            current_video_title = f"Context: {script_input[:200]}..."
 
-        # 2. 프롬프트 생성 (병렬)
-        status_box.write(f"📝 프롬프트 작성 중 ({GEMINI_TEXT_MODEL_NAME})...")
+        # -------------------------------------------------------
+        # 2. 프롬프트 생성 (병렬) - 기존 로직 유지
+        # -------------------------------------------------------
+        status_box.write(f"📝 씬별 프롬프트 작성 중 ({GEMINI_TEXT_MODEL_NAME})...")
         prompts = []
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = []
@@ -1242,13 +1381,13 @@ if start_btn:
 
         results = []
 
-        # [멀티 API] API 키 개수에 따라 worker 수와 대기 시간 조절
-        # 키 1개: 3초 간격 (분당 20개)
-        # 키 2개: 1.5초 간격 (분당 40개)
-        # 키 3개: 1초 간격 (분당 60개)
-        # 키 4개: 0.75초 간격 (분당 80개)
-        sleep_interval = 3.0 / num_clients
-        adjusted_workers = min(max_workers, num_clients * 5)  # API 키당 5개 worker
+        # [멀티 API] API 키 개수에 따라 worker 수와 대기 시간 조절 (안정성 강화)
+        # 키 1개: 4초 간격 (분당 15개, 안전 마진)
+        # 키 2개: 3초 간격 (분당 20개 x 2 = 40개 가능하지만 안전하게)
+        # 키 3개: 2초 간격
+        # 키 4개: 1.5초 간격
+        sleep_interval = max(4.0 / num_clients, 1.5)  # 최소 1.5초 보장
+        adjusted_workers = min(max_workers, num_clients * 3)  # API 키당 3개 worker로 축소
 
         with ThreadPoolExecutor(max_workers=adjusted_workers) as executor:
             future_to_meta = {}
