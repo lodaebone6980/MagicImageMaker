@@ -362,54 +362,51 @@ def make_filename(scene_num, text_chunk):
     return filename
 
 # ==========================================
-# [최종 업그레이드] 함수: 프롬프트 생성 (구도 분석 + 경제학적 연출 + 컬러 의상)
+# [마스터 업그레이드] 함수: 프롬프트 생성 (풀착장 + 텍스트 가독성 + 정확한 단어)
 # ==========================================
 def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, target_language="Korean"):
-    """[최종 업그레이드] 구도 분석 + 경제학적 연출 + 컬러 의상 + 선명한 텍스트 지침"""
+    """[마스터 업그레이드] 풀착장 캐릭터 + 텍스트 가독성 극대화 + 정확한 단어 사용"""
     scene_num = index + 1
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TEXT_MODEL_NAME}:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
 
-    # 1. 언어 설정 (사용자 선택 반영)
-    lang_guide = f"화면 속 모든 글자는 반드시 '{target_language}'(으)로만 표기하십시오."
+    # 1. 언어 설정
+    lang_guide = f"화면 속 모든 텍스트는 반드시 '{target_language}'(으)로만 작성하십시오. 영어 발음을 그대로 옮긴 단어(예: JJANGMYEON)는 절대 사용하지 말고, 해당 언어의 표준 단어(예: 짜장면)를 사용하십시오."
 
-    # 2. 스타일 접미사 (의상 컬러 및 외곽선 강조 추가)
-    # [변경] 옷은 무조건 컬러, 텍스트는 두꺼운 외곽선(High-pixel stroke) 명시
+    # 2. 고정 스타일 접미사 (상하의 의상 + 텍스트 외곽선)
+    # [변경] 의상은 상의(Top)와 하의(Pants)를 모두 명시, 텍스트는 배경과 분리된 박스나 두꺼운 테두리 강조
     style_suffix = (
-        ", 2D animation style, a white circle-faced stickman with a white body, "
-        "**but always wearing vibrant colorful clothes (e.g., blue suits, red shirts, yellow ties)**. "
-        "Single unified scene, **strictly NO split screens, NO vertical divider lines**. "
-        "High-key studio lighting, bright and clear. "
-        "Text must have a **very thick high-pixel outline** for maximum readability."
+        ", 2D flat animation style. The white stickman MUST be fully dressed, "
+        "**wearing both a colorful top (shirt/suit) and long pants (trousers)**. "
+        "Single unified scene, NO split screens. "
+        "**Text must be placed inside a high-contrast speech bubble or on a clear signboard with a thick black outline** "
+        "to ensure it is not buried by the background. High-key studio lighting, vivid colors."
     )
 
-    # 3. 프롬프트 지침 (경제학적 해석 + 구도 다양성)
+    # 3. 프롬프트 지침 (정확성 + 구도 + 의상)
     full_instruction = f"""
 [Role]
-당신은 대본의 경제적 맥락을 분석하여 최적의 비주얼을 설계하는 '비즈니스 스토리보드 감독'입니다.
+당신은 시각적 가독성과 캐릭터의 완성도를 중시하는 '인포그래픽 전문 감독'입니다.
 
 [Style Guide]
 {style_instruction}
 
-[Visual Task: 구도와 연출]
-1. **단일 화면 구성 (Single Scene):** 화면을 좌우로 나누거나(Split screen), 중앙에 세로선(|)이 생기는 대칭 구도를 **절대 사용하지 마십시오.** 하나의 통합된 공간으로 연출하십시오.
-2. **의상과 대비 (Colorful Clothing):** 하얀 스틱맨 캐릭터는 반드시 **선명한 유색 의상(정장, 셔츠, 유니폼 등)**을 입혀 배경 및 몸체와 확실히 구분되게 하십시오.
-3. **경제학적 연출 (Business Interpretation):** '몰락'이나 '실패'를 그릴 때 어둡게 표현하지 마십시오. 대신 아래와 같은 '경제적 변곡점'의 관점으로 묘사하십시오.
-   - **위기:** '맑은 대낮에 거대한 황금 기둥에 금이 가는 모습', '밝은 바다에서 로고가 그려진 배가 기울어지는 모습'
-   - **시장 변화:** '오래된 건물이 밝게 부서지고 그 옆에 새 건물이 올라오는 모습', '빨간색 하락 화살표가 밝은 도심을 관통하는 모습'
-4. **텍스트 시인성:** {lang_guide} 텍스트는 2~3개 핵심 키워드만 사용하되, **외곽선(Outline)의 픽셀(px)을 매우 높여서** 배경과 완전히 분리되어 선명하게 보이도록 묘사하십시오.
+[Visual Task: 핵심 수칙]
+1. **정확한 단어 사용:** 대본의 맥락을 파악하여 '{target_language}' 표준 단어만 사용하십시오. 존재하지 않는 조합어(예: 충국집)나 영문 표기(예: JJANGMYEON)를 절대 금지합니다. 중국집은 '중식당' 혹은 '중국집'으로 정확히 표기하십시오.
+2. **캐릭터 의상 (Full Outfit):** 하얀 스틱맨은 반드시 **상의(셔츠/자켓)와 하의(바지)**를 모두 입고 있어야 합니다. 맨몸에 넥타이만 매거나 상의만 입는 연출을 엄격히 금지합니다. 의상은 배경과 대비되는 선명한 유색(컬러)이어야 합니다.
+3. **텍스트 시인성 (Text Readability):** {lang_guide}
+   - 텍스트는 배경 이미지와 직접 겹치지 않도록 **'깨끗한 말풍선'**이나 **'별도의 전광판/표지판'** 안에 배치하십시오.
+   - 글자의 외곽선(Outline) 픽셀을 매우 높여 배경과 확실히 분리되게 하십시오.
+4. **구도의 다양화:** 대본을 분석하여 '와이드/미디엄/클로즈업' 중 최적의 구도를 스스로 선택하십시오. 단, 화면 분할(Split screen)은 하지 마십시오.
 
-[연출 모드 선택 지침]
-대본을 읽고 가장 적합한 구도를 스스로 판단하여 프롬프트를 작성하십시오.
-- **모드 1 (와이드):** 시장의 반응, 군중(엑스트라), 거대 기업 건물 등을 보여줄 때.
-- **모드 2 (미디엄):** 스틱맨들 간의 협상, 갈등, 컬러풀한 옷을 입은 캐릭터의 동작이 중요할 때.
-- **모드 3 (클로즈업):** 로고, 특정 사물, 혹은 부서지는 상징물 등을 강조할 때.
+[경제적 상황 연출]
+- 가격 상승이나 위기 상황을 그릴 때 '어둠'을 쓰지 마십시오. 대신 '밝은 조명 아래 땀을 흘리는 캐릭터', '부서지는 황금색 사물', '우상향하는 빨간색 화살표' 등을 활용하십시오.
 
 [영상 주제] "{video_title}"
 [대본 조각] "{text_chunk}"
 
 [Output 형식]
-- 구도 설명 없이 **이미지 생성용 한국어 프롬프트만** 출력하십시오.
+- 구도 설명이나 잡담 없이 **이미지 생성용 한국어 프롬프트만** 출력하십시오.
 """
 
     payload = {
