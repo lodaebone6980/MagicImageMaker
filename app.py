@@ -1181,13 +1181,13 @@ with col_input_opt:
     st.info("⏱️ 씬 분할 설정")
     scene_duration = st.slider(
         "한 씬당 목표 글자수",
-        min_value=100,
-        max_value=300,
-        value=200,
+        min_value=150,
+        max_value=350,
+        value=227,
         step=10,
-        help="AI가 문맥을 파악하여 이 길이 근처에서 씬을 나눕니다. 문장 중간에 끊기지 않습니다."
+        help="공백 포함 약 227자(375byte) = 약 35초 분량. AI가 문맥을 파악하여 이 길이 근처에서 씬을 나눕니다."
     )
-    st.caption(f"약 {scene_duration}자 = 약 {scene_duration // 6}초 분량")
+    st.caption(f"약 {scene_duration}자 ≈ {scene_duration // 6}초 분량")
 
 with col_input_txt:
     script_input = st.text_area(
@@ -1204,6 +1204,8 @@ if 'is_processing' not in st.session_state:
     st.session_state['is_processing'] = False
 if 'split_scenes' not in st.session_state:
     st.session_state['split_scenes'] = []
+if 'scenes_expanded' not in st.session_state:
+    st.session_state['scenes_expanded'] = False
 
 # ==========================================
 # [NEW] 씬 분할 미리보기 (이미지 생성 전 확인)
@@ -1230,11 +1232,24 @@ if split_btn:
             st.session_state['split_scenes'] = split_text_automatically(preview_client, script_input, target_chars=scene_duration)
         st.success(f"✅ 총 {len(st.session_state['split_scenes'])}개 씬으로 분할되었습니다.")
 
-# [분할된 씬 표시]
+# [분할된 씬 표시] - 전체 열기/닫기 기능 포함
 if st.session_state.get('split_scenes'):
-    st.subheader("🎬 씬 분할 결과 (미리보기)")
+    col_title, col_btns = st.columns([3, 1])
+    with col_title:
+        st.subheader("🎬 씬 분할 결과")
+    with col_btns:
+        col_open, col_close = st.columns(2)
+        with col_open:
+            if st.button("📂 전체 열기", use_container_width=True, key="expand_all_scenes"):
+                st.session_state['scenes_expanded'] = True
+                st.rerun()
+        with col_close:
+            if st.button("📁 전체 닫기", use_container_width=True, key="collapse_all_scenes"):
+                st.session_state['scenes_expanded'] = False
+                st.rerun()
+
     for idx, scene_text in enumerate(st.session_state['split_scenes']):
-        with st.expander(f"Scene {idx + 1} ({len(scene_text)}자)", expanded=False):
+        with st.expander(f"Scene {idx + 1} ({len(scene_text)}자)", expanded=st.session_state.get('scenes_expanded', False)):
             st.text_area(
                 f"씬 {idx + 1} 대본",
                 value=scene_text,
@@ -1287,10 +1302,8 @@ if start_btn:
 
         status_box.write(f"✅ AI 분석 완료: 총 {total_scenes}개의 장면으로 구성되었습니다.")
 
-        # 분할된 내용 미리보기
-        with st.expander("🔍 분할된 씬 내용 확인하기", expanded=False):
-            for idx, chunk in enumerate(chunks):
-                st.caption(f"**Scene {idx+1}** ({len(chunk)}자): {chunk[:80]}...")
+        # [중요] 분할된 씬을 session_state에 저장 (결과물 위에 표시하기 위해)
+        st.session_state['split_scenes'] = chunks
 
         # [맥락 주입] 영상 제목이 없다면 첫 문장으로 대체
         current_video_title = st.session_state.get('video_title', "").strip()
@@ -1400,6 +1413,34 @@ if start_btn:
 # ==========================================
 if st.session_state['generated_results']:
     st.divider()
+
+    # [NEW] 결과물 위에 씬 분할 결과 표시
+    if st.session_state.get('split_scenes'):
+        col_scene_title, col_scene_btns = st.columns([3, 1])
+        with col_scene_title:
+            st.subheader(f"📋 씬 분할 결과 ({len(st.session_state['split_scenes'])}개)")
+        with col_scene_btns:
+            col_o, col_c = st.columns(2)
+            with col_o:
+                if st.button("📂 열기", use_container_width=True, key="result_expand_all"):
+                    st.session_state['scenes_expanded'] = True
+                    st.rerun()
+            with col_c:
+                if st.button("📁 닫기", use_container_width=True, key="result_collapse_all"):
+                    st.session_state['scenes_expanded'] = False
+                    st.rerun()
+
+        for idx, scene_text in enumerate(st.session_state['split_scenes']):
+            with st.expander(f"Scene {idx + 1} ({len(scene_text)}자)", expanded=st.session_state.get('scenes_expanded', False)):
+                st.text_area(
+                    f"대본",
+                    value=scene_text,
+                    height=80,
+                    key=f"result_scene_{idx}",
+                    disabled=True
+                )
+        st.divider()
+
     st.header(f"📸 결과물 ({len(st.session_state['generated_results'])}장)")
     
     # ------------------------------------------------
