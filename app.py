@@ -300,7 +300,7 @@ def make_filename(scene_num, text_chunk):
 # [수정됨] 함수: 프롬프트 생성 (컨셉 기반 통합 버전)
 # ==========================================
 def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, target_language="Korean"):
-    """[수정됨] Gems 공식 + 텍스트 통합 버전"""
+    """[수정됨] Gems 공식 + 텍스트 통합 + 디테일 강화 버전"""
     scene_num = index + 1
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TEXT_MODEL_NAME}:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
@@ -315,10 +315,10 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
     else:
         lang_guide = f"화면 속 핵심 키워드는 무조건 '{target_language}'로 표기하십시오."
 
-    # 2. [중요] Gems 스타일 강제 고정용 Suffix (영어) - 스틱맨 정체성 + 하얀 몸/팔다리 확보
-    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, rendered with simple lines and flat vivid color planes, emphasizing vivid architectural atmosphere and cinematic lighting."
+    # 2. [중요] Gems 스타일 강제 고정용 Suffix (영어) - 스틱맨 정체성 + 하얀 몸/팔다리 + 얼굴 명확히
+    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, rendered with simple lines and flat vivid color planes. **Face must be clearly visible.**"
 
-    # 3. 프롬프트 작성 지침 (Gems 공식 + 텍스트 통합)
+    # 3. 프롬프트 작성 지침 (Gems 공식 + 텍스트 통합 + 디테일 강화)
     full_instruction = f"""
 [Role]
 You are a '2D Stickman Animation Prompt Director'.
@@ -329,31 +329,34 @@ You are a '2D Stickman Animation Prompt Director'.
 [Style Guide - MUST FOLLOW]
 {style_instruction}
 
+[CRITICAL RULE - POSE & FACE DETAILS]
+1. **If the character is sitting:** Do NOT just say "sitting". Describe the limbs. (e.g., "Sitting with knees bent", "Legs stretched out on the ruins", "Arms resting on knees").
+2. **If the character is looking down:** Do NOT hide the face. Use terms like "Head tilted down but face fully visible to camera", "Chin tucked but expression clear".
+3. **Camera:** For emotional scenes (despair, sitting), use **"Medium Shot"** or **"Close-up"** instead of Wide Shot to show the facial expression clearly.
+
 [Prompt Structure Formula]
-You must write the prompt in **Korean** following this exact order:
+Write the prompt in **Korean** in this order:
 
-1. **[Camera Angle & Shot]**: 구체적인 카메라 앵글 지정
-   (예: 로우 앵글 샷, 드론 뷰, 클로즈업, 와이드 샷, 버드아이 뷰)
+1. **[Camera Angle & Shot]**: 감정적인 장면(절망, 앉아있는 포즈)에서는 "미디엄 샷" 또는 "클로즈업" 사용
+   (예: 로우 앵글 미디엄 샷, 클로즈업, 미디엄 샷)
 
-2. **[Character & Costume]**: "White circle-faced stickman with white body and white limbs"를 반드시 명시하고 구체적인 의상/색상 지정
-   (예: "하얀 몸과 하얀 팔다리를 가진 스틱맨 CEO가 네이비 정장을 입고 있다", "하얀 원형 얼굴과 하얀 팔다리의 스틱맨이 낡은 회색 가디건을 입고 있다")
+2. **[Character & Costume]**: "하얀 원형 얼굴과 하얀 팔다리의 스틱맨" + 의상. **표정을 생생하게 묘사 (예: 눈물, 텅 빈 눈, 찌푸린 눈썹)**
+   (예: "하얀 몸과 하얀 팔다리를 가진 스틱맨이 낡은 회색 가디건을 입고 있다. 눈물이 흐르는 절망적인 표정.")
 
-3. **[Action & Emotion]**: 스틱맨이 무엇을 하고 있는지, 어떤 감정인지 묘사
-   (예: 자신감 넘치는 표정으로 프레젠테이션 중, 절망적인 표정으로 고개를 숙이고 있다)
+3. **[Pose Detail]**: **팔과 다리가 구체적으로 어디에 위치해 있는지 묘사**
+   (예: "양손을 깍지 끼고", "어깨가 축 처져 있다", "무릎을 가슴 쪽으로 당겨 앉아 있다", "팔을 무릎 위에 힘없이 걸쳐 있다")
 
 4. **[Background & Lighting]**: 구체적인 색상과 조명 이름으로 생생하게 묘사
    (예: "Golden Amber 조명이 비추는 고급 사무실", "Neon Pink와 Cold Blue가 어우러진 도시 야경")
 
 5. **[Text Object Integration]**: {lang_guide}
-   대본에서 핵심 키워드 2-3개를 추출하여 장면 속 오브젝트로 배치
-   (예: "'성공'이라는 글자가 네온사인처럼 빛나고 있다", "간판에 '희망'이라고 적혀 있다", "'파멸'이라는 한글이 공중에 홀로그램처럼 떠 있다")
+   대본에서 핵심 키워드 2-3개를 추출하여 네온사인, 홀로그램, 그래피티 등으로 배치
 
 [Output Constraints]
-- 순수 텍스트만 출력 (마크다운 강조 금지)
+- 순수 텍스트만 출력 (마크다운 금지)
 - 무조건 한국어로 작성
 - 최소 5문장 이상으로 상세하게 묘사
-- 스토리가 아닌 시각적 묘사로 작성
-- 이모티콘 기호 사용 금지 (^_^, >_<, :D 등 금지)
+- 고개를 숙여도 얼굴이 카메라에 보이게 묘사
 
 [Script Segment]
 "{text_chunk}"
