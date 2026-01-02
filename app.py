@@ -282,38 +282,69 @@ def parse_numbered_script(script):
     return scenes
 
 # ==========================================
-# [NEW] 함수: 대본 자동 분할 (문장 단위 + 글자수 제한)
+# [UPGRADE] 함수: AI 기반 대본 맥락 분할
 # ==========================================
-def split_text_automatically(full_text, chars_per_scene=180):
+def split_text_automatically(client, full_text, target_chars=200):
     """
-    긴 대본을 문장 단위로 자르되, 설정된 글자수(약 30초 분량)에 맞춰 그룹화합니다.
+    Gemini를 이용해 문맥(Context)을 파악하고,
+    시각적 장면 전환이 필요한 지점마다 대본을 분할합니다.
+    (기준은 약 150~200자이지만, 문맥을 최우선으로 고려)
     """
-    import re
+    prompt = f"""
+    [Role]
+    You are a professional Video Editor and Storyboard Artist.
 
-    # 1. 문장 종결 부호(. ? !) 뒤에서 자르기
-    # (?<=[.?!])는 .?! 뒤에 오는 위치를 찾음
-    sentences = re.split(r'(?<=[.?!])\s+', full_text.strip())
+    [Task]
+    Split the provided [Script] into multiple "Scenes" for image generation.
 
-    scenes = []
-    current_chunk = ""
+    [Rules]
+    1. **Context First:** Read the entire context. Split the text where the visual scene, topic, or mood changes.
+    2. **Length Guideline:** Aim for each scene to be roughly **{target_chars} characters** (approx. 20-40 seconds).
+       - However, DO NOT break a sentence in the middle.
+       - If a topic is long, split it into logical parts.
+       - If a topic is short but distinct, keep it as a separate scene.
+    3. **Output Format:** Return ONLY a raw JSON list of strings. No markdown, no "```json".
+       - Example: ["First scene text...", "Second scene text...", "Third scene text..."]
 
-    for sentence in sentences:
-        if not sentence.strip(): continue
+    [Script]
+    {full_text}
+    """
 
-        # 현재 덩어리에 문장을 더했을 때 목표치를 넘으면 -> 저장하고 비움
-        if len(current_chunk) + len(sentence) > chars_per_scene:
-            if current_chunk: # 빈 덩어리가 아니면 저장
-                scenes.append(current_chunk.strip())
-            current_chunk = sentence # 새로운 덩어리 시작
+    try:
+        response = client.models.generate_content(
+            model=GEMINI_TEXT_MODEL_NAME,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"  # JSON 강제 출력
+            )
+        )
+
+        # JSON 파싱
+        scenes = json.loads(response.text)
+
+        # 만약 리스트가 아니라면(혹시 모를 에러 대비) 강제 리스트 변환
+        if isinstance(scenes, list):
+            return [s.strip() for s in scenes if s.strip()]
         else:
-            # 목표치 안 넘으면 계속 이어붙임
-            current_chunk += " " + sentence
+            # 구조가 다르면 단순 줄바꿈 분할로 대체 (Fallback)
+            return [s.strip() for s in full_text.split('\n') if s.strip()]
 
-    # 마지막 남은 덩어리 저장
-    if current_chunk:
-        scenes.append(current_chunk.strip())
-
-    return scenes
+    except Exception as e:
+        print(f"AI Split Error: {e}")
+        # API 에러 발생 시 기존의 단순 규칙 기반 분할로 대체 (안전장치)
+        import re
+        sentences = re.split(r'(?<=[.?!])\s+', full_text.strip())
+        scenes = []
+        current_chunk = ""
+        for sentence in sentences:
+            if not sentence.strip(): continue
+            if len(current_chunk) + len(sentence) > target_chars:
+                if current_chunk: scenes.append(current_chunk.strip())
+                current_chunk = sentence
+            else:
+                current_chunk += " " + sentence
+        if current_chunk: scenes.append(current_chunk.strip())
+        return scenes
 
 def make_filename(scene_num, text_chunk):
     clean_line = text_chunk.replace("\n", " ").strip()
@@ -1186,10 +1217,10 @@ if 'section_scripts' in st.session_state and st.session_state['section_scripts']
             st.rerun()
 
 # ==========================================
-# [UI] 메인 화면: 대본 입력 및 자동 분할 설정
+# [UI] 메인 화면: 대본 입력 및 AI 씬 분할
 # ==========================================
 st.divider()
-st.subheader("📜 대본 입력 (자동 분할)")
+st.subheader("📜 대본 입력 (AI 자동 분할)")
 st.caption("대본 전체를 복사해서 붙여넣으세요. AI가 문맥에 맞춰 자동으로 씬을 나눠줍니다.")
 
 col_input_opt, col_input_txt = st.columns([1, 3])
@@ -1197,79 +1228,121 @@ col_input_opt, col_input_txt = st.columns([1, 3])
 with col_input_opt:
     st.info("⏱️ 씬 분할 설정")
     scene_duration = st.slider(
-        "한 씬당 호흡 (글자수)",
+        "한 씬당 목표 글자수",
         min_value=100,
         max_value=300,
-        value=180,
+        value=200,
         step=10,
-        help="보통 180~200자가 30초 정도의 내레이션 분량입니다."
+        help="AI가 문맥을 파악하여 이 길이 근처에서 씬을 나눕니다. 문장 중간에 끊기지 않습니다."
     )
-    st.caption(f"설정된 길이마다 이미지가 한 장씩 생성됩니다.")
+    st.caption(f"약 {scene_duration}자 = 약 {scene_duration // 6}초 분량")
 
 with col_input_txt:
     script_input = st.text_area(
         "전체 대본 붙여넣기",
         height=300,
-        placeholder="번호를 붙일 필요 없이 대본을 쭉 붙여넣으세요.\n예시:\n안녕하세요. 오늘은 경제 위기에 대해 이야기해보려 합니다. 최근 뉴스를 보면 많은 기업들이 어려움을 겪고 있습니다. 하지만 위기 속에서도 기회를 찾는 사람들이 있죠. 오늘은 그런 이야기를 해보겠습니다.",
+        placeholder="대본을 그대로 붙여넣으세요. AI가 문맥을 파악해 자동으로 씬을 나눕니다.\n\n예시:\n안녕하세요. 오늘은 경제 위기에 대해 이야기해보려 합니다. 최근 뉴스를 보면 많은 기업들이 어려움을 겪고 있습니다. 하지만 위기 속에서도 기회를 찾는 사람들이 있죠. 이런 상황에서 우리는 어떻게 해야 할까요?",
         key="image_gen_input"
     )
 
+# 세션 상태 초기화
 if 'generated_results' not in st.session_state:
     st.session_state['generated_results'] = []
 if 'is_processing' not in st.session_state:
     st.session_state['is_processing'] = False
+if 'split_scenes' not in st.session_state:
+    st.session_state['split_scenes'] = []
 
-# [KEY FIX] 버튼 클릭 시 결과물 초기화 함수 추가
-def clear_generated_results():
-    st.session_state['generated_results'] = []
+# ==========================================
+# [NEW] 씬 분할 미리보기 (이미지 생성 전 확인)
+# ==========================================
+col_split_btn, col_gen_btn = st.columns(2)
 
-start_btn = st.button("🚀 자동 분할 및 이미지 생성 시작", type="primary", use_container_width=True, on_click=clear_generated_results)
+with col_split_btn:
+    split_btn = st.button("✂️ 씬 분할 미리보기", type="secondary", use_container_width=True)
 
+with col_gen_btn:
+    def clear_generated_results():
+        st.session_state['generated_results'] = []
+    start_btn = st.button("🚀 이미지 생성 시작", type="primary", use_container_width=True, on_click=clear_generated_results)
+
+# [씬 분할 미리보기 처리]
+if split_btn:
+    if not api_key:
+        st.error("⚠️ Google API Key를 입력해주세요.")
+    elif not script_input:
+        st.warning("⚠️ 대본을 입력해주세요.")
+    else:
+        with st.spinner("🧠 AI가 대본을 분석하여 씬을 나누는 중..."):
+            preview_client = genai.Client(api_key=api_key)
+            st.session_state['split_scenes'] = split_text_automatically(preview_client, script_input, target_chars=scene_duration)
+        st.success(f"✅ 총 {len(st.session_state['split_scenes'])}개 씬으로 분할되었습니다.")
+
+# [분할된 씬 표시]
+if st.session_state.get('split_scenes'):
+    st.subheader("🎬 씬 분할 결과 (미리보기)")
+    for idx, scene_text in enumerate(st.session_state['split_scenes']):
+        with st.expander(f"Scene {idx + 1} ({len(scene_text)}자)", expanded=False):
+            st.text_area(
+                f"씬 {idx + 1} 대본",
+                value=scene_text,
+                height=100,
+                key=f"scene_preview_{idx}",
+                disabled=True
+            )
+
+st.divider()
+
+# [이미지 생성 처리]
 if start_btn:
     if not api_key:
         st.error("⚠️ Google API Key를 입력해주세요.")
     elif not script_input:
         st.warning("⚠️ 대본을 입력해주세요.")
     else:
-        # [FIX] 기존 결과 확실히 날리기
+        # 기존 결과 초기화
         st.session_state['generated_results'] = []
         st.session_state['is_processing'] = True
 
-        # [FIX] 기존 이미지 파일들 물리적으로 삭제 (찌꺼기 제거)
+        # 기존 이미지 파일들 물리적으로 삭제
         if os.path.exists(IMAGE_OUTPUT_DIR):
-            shutil.rmtree(IMAGE_OUTPUT_DIR) # 폴더 통째로 삭제
-        init_folders() # 다시 깨끗한 폴더 생성
+            shutil.rmtree(IMAGE_OUTPUT_DIR)
+        init_folders()
 
         # [멀티 API 지원] 여러 클라이언트 생성
         clients = []
         for key in api_keys:
             clients.append(genai.Client(api_key=key))
 
-        # 호환성을 위해 첫 번째 클라이언트를 client로도 저장
+        # 메인 클라이언트 (AI 분할용)
         client = clients[0] if clients else genai.Client(api_key=api_key)
 
         status_box = st.status("작업 진행 중...", expanded=True)
         progress_bar = st.progress(0)
 
         # -------------------------------------------------------
-        # [핵심 변경] 1. 대본 자동 분할 실행
+        # [핵심] AI가 문맥을 파악하여 씬 분할
         # -------------------------------------------------------
-        status_box.write(f"✂️ 대본을 {scene_duration}자(약 30초) 단위로 자르고 있습니다...")
+        status_box.write(f"🧠 AI가 대본 전체 맥락을 읽고 씬을 나누는 중입니다... (기준: 약 {scene_duration}자)")
 
-        # 번호 파싱 대신 자동 분할 함수 사용
-        chunks = split_text_automatically(script_input, chars_per_scene=scene_duration)
+        # [변경점] client 인자 추가
+        chunks = split_text_automatically(client, script_input, target_chars=scene_duration)
         total_scenes = len(chunks)
 
         if total_scenes == 0:
-            status_box.update(label="⚠️ 분할할 대본이 없습니다.", state="error")
+            status_box.update(label="⚠️ 분할 실패.", state="error")
             st.stop()
 
-        status_box.write(f"✅ 총 {total_scenes}개의 씬(이미지)으로 구성되었습니다.")
+        status_box.write(f"✅ AI 분석 완료: 총 {total_scenes}개의 장면으로 구성되었습니다.")
 
-        # [맥락 주입] 영상 제목이 없다면 첫 문장으로 대체하거나 요약
+        # 분할된 내용 미리보기
+        with st.expander("🔍 분할된 씬 내용 확인하기", expanded=False):
+            for idx, chunk in enumerate(chunks):
+                st.caption(f"**Scene {idx+1}** ({len(chunk)}자): {chunk[:80]}...")
+
+        # [맥락 주입] 영상 제목이 없다면 첫 문장으로 대체
         current_video_title = st.session_state.get('video_title', "").strip()
         if not current_video_title:
-            # 제목이 없으면 전체 대본의 앞부분을 요약해서 맥락으로 사용
             current_video_title = f"Context: {script_input[:200]}..."
 
         # -------------------------------------------------------
@@ -1308,13 +1381,13 @@ if start_btn:
 
         results = []
 
-        # [멀티 API] API 키 개수에 따라 worker 수와 대기 시간 조절
-        # 키 1개: 3초 간격 (분당 20개)
-        # 키 2개: 1.5초 간격 (분당 40개)
-        # 키 3개: 1초 간격 (분당 60개)
-        # 키 4개: 0.75초 간격 (분당 80개)
-        sleep_interval = 3.0 / num_clients
-        adjusted_workers = min(max_workers, num_clients * 5)  # API 키당 5개 worker
+        # [멀티 API] API 키 개수에 따라 worker 수와 대기 시간 조절 (안정성 강화)
+        # 키 1개: 4초 간격 (분당 15개, 안전 마진)
+        # 키 2개: 3초 간격 (분당 20개 x 2 = 40개 가능하지만 안전하게)
+        # 키 3개: 2초 간격
+        # 키 4개: 1.5초 간격
+        sleep_interval = max(4.0 / num_clients, 1.5)  # 최소 1.5초 보장
+        adjusted_workers = min(max_workers, num_clients * 3)  # API 키당 3개 worker로 축소
 
         with ThreadPoolExecutor(max_workers=adjusted_workers) as executor:
             future_to_meta = {}
