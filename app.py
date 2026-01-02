@@ -362,94 +362,54 @@ def make_filename(scene_num, text_chunk):
     return filename
 
 # ==========================================
-# [수정됨] 함수: 프롬프트 생성 (컨셉 기반 통합 버전)
+# [최종 업그레이드] 함수: 프롬프트 생성 (구도 분석 + 경제학적 연출 + 컬러 의상)
 # ==========================================
 def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, target_language="Korean"):
-    """[수정됨] Gems 공식 + 상황별 배경/텍스트 가이드 버전"""
+    """[최종 업그레이드] 구도 분석 + 경제학적 연출 + 컬러 의상 + 선명한 텍스트 지침"""
     scene_num = index + 1
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TEXT_MODEL_NAME}:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
 
-    # 1. 언어 설정
-    if target_language == "Korean":
-        lang_guide = "화면 속 핵심 키워드는 무조건 '한글(Korean)'로 표기하십시오."
-    elif target_language == "English":
-        lang_guide = "화면 속 핵심 키워드는 무조건 '영어(English)'로 표기하십시오."
-    elif target_language == "Japanese":
-        lang_guide = "화면 속 핵심 키워드는 무조건 '일본어(Japanese)'로 표기하십시오."
-    else:
-        lang_guide = f"화면 속 핵심 키워드는 무조건 '{target_language}'로 표기하십시오."
+    # 1. 언어 설정 (사용자 선택 반영)
+    lang_guide = f"화면 속 모든 글자는 반드시 '{target_language}'(으)로만 표기하십시오."
 
-    # 2. [중요] Suffix - 밝은 조명 + 텍스트 2-3개 제한 강조
-    style_suffix = ", The style is 2D animation featuring a white circle-faced stickman with a white body and white limbs, simple lines, and flat vivid colors. **Lighting is bright and clear. Text is limited to 2-3 core keywords with distinct outlines.**"
+    # 2. 스타일 접미사 (의상 컬러 및 외곽선 강조 추가)
+    # [변경] 옷은 무조건 컬러, 텍스트는 두꺼운 외곽선(High-pixel stroke) 명시
+    style_suffix = (
+        ", 2D animation style, a white circle-faced stickman with a white body, "
+        "**but always wearing vibrant colorful clothes (e.g., blue suits, red shirts, yellow ties)**. "
+        "Single unified scene, **strictly NO split screens, NO vertical divider lines**. "
+        "High-key studio lighting, bright and clear. "
+        "Text must have a **very thick high-pixel outline** for maximum readability."
+    )
 
-    # 3. 프롬프트 작성 지침 (Gems 공식 + 밝은 조명 + 키워드 제한)
+    # 3. 프롬프트 지침 (경제학적 해석 + 구도 다양성)
     full_instruction = f"""
 [Role]
-You are a '2D Stickman Animation Prompt Director'.
-
-[Video Title]
-"{video_title}"
+당신은 대본의 경제적 맥락을 분석하여 최적의 비주얼을 설계하는 '비즈니스 스토리보드 감독'입니다.
 
 [Style Guide]
 {style_instruction}
 
-[GUIDE: Lighting & Text Constraint]
-1. **Lighting Rule:** Make the scene **BRIGHT and VISIBLE**.
-   - Avoid "Darkness" or "Pitch Black Night" unless absolutely necessary.
-   - Even for sad scenes, use "Grey cloudy day" or "Dim room with visible details" instead of pitch black.
-   - Use keywords: "Bright Daylight", "Soft Studio Light", "Clean White Background", "Warm Golden Light".
+[Visual Task: 구도와 연출]
+1. **단일 화면 구성 (Single Scene):** 화면을 좌우로 나누거나(Split screen), 중앙에 세로선(|)이 생기는 대칭 구도를 **절대 사용하지 마십시오.** 하나의 통합된 공간으로 연출하십시오.
+2. **의상과 대비 (Colorful Clothing):** 하얀 스틱맨 캐릭터는 반드시 **선명한 유색 의상(정장, 셔츠, 유니폼 등)**을 입혀 배경 및 몸체와 확실히 구분되게 하십시오.
+3. **경제학적 연출 (Business Interpretation):** '몰락'이나 '실패'를 그릴 때 어둡게 표현하지 마십시오. 대신 아래와 같은 '경제적 변곡점'의 관점으로 묘사하십시오.
+   - **위기:** '맑은 대낮에 거대한 황금 기둥에 금이 가는 모습', '밝은 바다에서 로고가 그려진 배가 기울어지는 모습'
+   - **시장 변화:** '오래된 건물이 밝게 부서지고 그 옆에 새 건물이 올라오는 모습', '빨간색 하락 화살표가 밝은 도심을 관통하는 모습'
+4. **텍스트 시인성:** {lang_guide} 텍스트는 2~3개 핵심 키워드만 사용하되, **외곽선(Outline)의 픽셀(px)을 매우 높여서** 배경과 완전히 분리되어 선명하게 보이도록 묘사하십시오.
 
-2. **Text Constraint:** Select **EXACTLY 2 or 3** most important keywords from the script.
-   - Do NOT write full sentences.
-   - Do NOT add too many labels. Just the core concepts.
-   - Text must have a **CLEAN OUTLINE** for readability.
+[연출 모드 선택 지침]
+대본을 읽고 가장 적합한 구도를 스스로 판단하여 프롬프트를 작성하십시오.
+- **모드 1 (와이드):** 시장의 반응, 군중(엑스트라), 거대 기업 건물 등을 보여줄 때.
+- **모드 2 (미디엄):** 스틱맨들 간의 협상, 갈등, 컬러풀한 옷을 입은 캐릭터의 동작이 중요할 때.
+- **모드 3 (클로즈업):** 로고, 특정 사물, 혹은 부서지는 상징물 등을 강조할 때.
 
-[Context-Aware Visual Guide (Crucial)]
-1. **Scenario: Business/Partnership**
-   - **Background:** Bright conference room, sunny stage with handshake, modern office.
-   - **Extras:** A few other stickmen (reporters, investors) in the background.
-   - **Text Integration:** Place text on **podiums**, **company flags**, **shirt labels**, or **presentation screens**.
+[영상 주제] "{video_title}"
+[대본 조각] "{text_chunk}"
 
-2. **Scenario: Economic Crisis/Failure**
-   - **Background:** Grey cloudy city, dim office (NOT pitch black), rainy street with visible sky.
-   - **Extras:** Usually solo, or with a few sad figures in the distance.
-   - **Text Integration:** Place text on **broken neon signs**, **cracked walls**, **graffiti**.
-
-3. **Scenario: Market/Public Reaction**
-   - **Background:** Bright public spaces, busy streets, stock market floors.
-   - **Extras:** **Crowd of anonymous stickmen** showing reactions.
-   - **Text Integration:** Text on **protest signs**, **thought bubbles**, **stock ticker boards**.
-
-4. **Scenario: News/Announcement**
-   - **Background:** Bright living room with TV, or well-lit news studio desk.
-   - **Extras:** None (focus on TV) or a news anchor stickman at desk.
-   - **Text Integration:** Text inside a **"Breaking News" banner on a TV screen**.
-
-[CRITICAL RULE - POSE & FACE DETAILS]
-1. **If the character is sitting:** Describe the limbs specifically. (e.g., "Sitting with knees bent", "Arms resting on knees").
-2. **If the character is looking down:** Keep face visible. Use "Head tilted down but face fully visible to camera".
-3. **Camera:** For emotional scenes, use **"Medium Shot"** or **"Close-up"**. For crowds, use **"Wide Shot"**.
-
-[Prompt Structure Formula]
-Write the prompt in **Korean** in this order:
-
-1. **[Camera Angle & Shot]**: "와이드 샷" (군중/대규모 장소) 또는 "미디엄 샷" (개인/감정 장면)
-2. **[Setting the Scene - Background & Context]**: **대본에 맞는 구체적인 배경 묘사. 반드시 밝게! (밝은 회의실, 회색 흐린 하늘, 밝은 거리 등)**
-3. **[Main Character(s) & Action]**: "하얀 원형 얼굴의 스틱맨" + 행동, 의상, **눈**과 **입** 묘사, 필요시 **옷에 이름표** 묘사
-4. **[Extras/Crowd Composition]**: 배경의 엑스트라 스틱맨들 묘사 (기자들, 군중, 그림자 인물 등) - 없으면 "없음"
-5. **[Text Object Integration]**: {lang_guide} **딱 2-3개 핵심 키워드만 선택! + 텍스트가 어떤 물체 위에 있는지 + 'CLEAN OUTLINE' 명시**
-6. **[Lighting & Color]**: "Bright White", "Golden Amber", "Soft Blue", "Grey Cloudy" 등 **무조건 밝게!**
-
-[Constraint]
-- 순수 텍스트만 출력 (마크다운 금지)
-- 무조건 한국어로 작성
-
-[Script Segment]
-"{text_chunk}"
-
-[Output]
-Write the prompt now:
+[Output 형식]
+- 구도 설명 없이 **이미지 생성용 한국어 프롬프트만** 출력하십시오.
 """
 
     payload = {
@@ -460,19 +420,14 @@ Write the prompt now:
         response = requests.post(url, headers=headers, data=json.dumps(payload))
         if response.status_code == 200:
             try:
-                # 생성된 한글 프롬프트 + 스타일 고정용 영어 Suffix 결합
                 generated_text = response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
-                # 마침표 정리 후 Suffix 붙이기
-                generated_text = generated_text.rstrip('.')
-                final_prompt = f"{generated_text}{style_suffix}"
+                # 마침표 정리 후 고정 스타일 Suffix 결합
+                final_prompt = f"{generated_text.rstrip('.')}{style_suffix}"
             except:
-                final_prompt = text_chunk
+                final_prompt = text_chunk + style_suffix
             return (scene_num, final_prompt)
-        elif response.status_code == 429:
-            time.sleep(2)
-            return (scene_num, f"일러스트 묘사: {text_chunk}")
         else:
-            return (scene_num, f"Error generating prompt: {response.status_code}")
+            return (scene_num, f"Error: {response.status_code}")
     except Exception as e:
         return (scene_num, f"Error: {e}")
 
