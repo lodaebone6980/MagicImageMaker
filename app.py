@@ -281,6 +281,40 @@ def parse_numbered_script(script):
 
     return scenes
 
+# ==========================================
+# [NEW] 함수: 대본 자동 분할 (문장 단위 + 글자수 제한)
+# ==========================================
+def split_text_automatically(full_text, chars_per_scene=180):
+    """
+    긴 대본을 문장 단위로 자르되, 설정된 글자수(약 30초 분량)에 맞춰 그룹화합니다.
+    """
+    import re
+
+    # 1. 문장 종결 부호(. ? !) 뒤에서 자르기
+    # (?<=[.?!])는 .?! 뒤에 오는 위치를 찾음
+    sentences = re.split(r'(?<=[.?!])\s+', full_text.strip())
+
+    scenes = []
+    current_chunk = ""
+
+    for sentence in sentences:
+        if not sentence.strip(): continue
+
+        # 현재 덩어리에 문장을 더했을 때 목표치를 넘으면 -> 저장하고 비움
+        if len(current_chunk) + len(sentence) > chars_per_scene:
+            if current_chunk: # 빈 덩어리가 아니면 저장
+                scenes.append(current_chunk.strip())
+            current_chunk = sentence # 새로운 덩어리 시작
+        else:
+            # 목표치 안 넘으면 계속 이어붙임
+            current_chunk += " " + sentence
+
+    # 마지막 남은 덩어리 저장
+    if current_chunk:
+        scenes.append(current_chunk.strip())
+
+    return scenes
+
 def make_filename(scene_num, text_chunk):
     clean_line = text_chunk.replace("\n", " ").strip()
     clean_line = re.sub(r'[\\/:*?"<>|]', "", clean_line)
@@ -1151,25 +1185,34 @@ if 'section_scripts' in st.session_state and st.session_state['section_scripts']
             st.session_state["image_gen_input"] = main_text_acc.strip()
             st.rerun()
 
-script_input = st.text_area(
-    "📜 번호로 분할된 대본 입력 (1. 2. 3. 형태)",
-    height=300,
-    placeholder="""예시:
-1.하지만 영원할 것 같았던
-이 거대한 제국은 어느 순간부터
-거리에 하나둘씩 간판을 내리기 시작하더니
-마치 신기루처럼 사라져버렸습니다
+# ==========================================
+# [UI] 메인 화면: 대본 입력 및 자동 분할 설정
+# ==========================================
+st.divider()
+st.subheader("📜 대본 입력 (자동 분할)")
+st.caption("대본 전체를 복사해서 붙여넣으세요. AI가 문맥에 맞춰 자동으로 씬을 나눠줍니다.")
 
-2.오백 개가 넘는 매장이
-순식간에 증발해 버린 진짜 이유는,
-외부의 적이 아닌 내부의 가족,
-바로 부부의 전쟁 때문이었습니다
+col_input_opt, col_input_txt = st.columns([1, 3])
 
-3.한때 대한민국 요식업 프랜차이즈의 신화였으나
-지금은 오너 리스크의 가장 끔찍한 교과서로 남게 된
-비운의 브랜드...""",
-    key="image_gen_input"
-)
+with col_input_opt:
+    st.info("⏱️ 씬 분할 설정")
+    scene_duration = st.slider(
+        "한 씬당 호흡 (글자수)",
+        min_value=100,
+        max_value=300,
+        value=180,
+        step=10,
+        help="보통 180~200자가 30초 정도의 내레이션 분량입니다."
+    )
+    st.caption(f"설정된 길이마다 이미지가 한 장씩 생성됩니다.")
+
+with col_input_txt:
+    script_input = st.text_area(
+        "전체 대본 붙여넣기",
+        height=300,
+        placeholder="번호를 붙일 필요 없이 대본을 쭉 붙여넣으세요.\n예시:\n안녕하세요. 오늘은 경제 위기에 대해 이야기해보려 합니다. 최근 뉴스를 보면 많은 기업들이 어려움을 겪고 있습니다. 하지만 위기 속에서도 기회를 찾는 사람들이 있죠. 오늘은 그런 이야기를 해보겠습니다.",
+        key="image_gen_input"
+    )
 
 if 'generated_results' not in st.session_state:
     st.session_state['generated_results'] = []
@@ -1180,7 +1223,7 @@ if 'is_processing' not in st.session_state:
 def clear_generated_results():
     st.session_state['generated_results'] = []
 
-start_btn = st.button("🚀 이미지 생성 시작", type="primary", width="stretch", on_click=clear_generated_results)
+start_btn = st.button("🚀 자동 분할 및 이미지 생성 시작", type="primary", use_container_width=True, on_click=clear_generated_results)
 
 if start_btn:
     if not api_key:
@@ -1189,14 +1232,14 @@ if start_btn:
         st.warning("⚠️ 대본을 입력해주세요.")
     else:
         # [FIX] 기존 결과 확실히 날리기
-        st.session_state['generated_results'] = [] 
+        st.session_state['generated_results'] = []
         st.session_state['is_processing'] = True
-        
+
         # [FIX] 기존 이미지 파일들 물리적으로 삭제 (찌꺼기 제거)
         if os.path.exists(IMAGE_OUTPUT_DIR):
             shutil.rmtree(IMAGE_OUTPUT_DIR) # 폴더 통째로 삭제
         init_folders() # 다시 깨끗한 폴더 생성
-        
+
         # [멀티 API 지원] 여러 클라이언트 생성
         clients = []
         for key in api_keys:
@@ -1208,23 +1251,31 @@ if start_btn:
         status_box = st.status("작업 진행 중...", expanded=True)
         progress_bar = st.progress(0)
 
-        # 1. 대본 분할 (번호 기반)
-        status_box.write(f"✂️ 번호(1. 2. 3.)로 분할된 대본 파싱 중...")
-        chunks = parse_numbered_script(script_input)
+        # -------------------------------------------------------
+        # [핵심 변경] 1. 대본 자동 분할 실행
+        # -------------------------------------------------------
+        status_box.write(f"✂️ 대본을 {scene_duration}자(약 30초) 단위로 자르고 있습니다...")
+
+        # 번호 파싱 대신 자동 분할 함수 사용
+        chunks = split_text_automatically(script_input, chars_per_scene=scene_duration)
         total_scenes = len(chunks)
 
         if total_scenes == 0:
-            status_box.update(label="⚠️ 번호로 분할된 씬을 찾을 수 없습니다. (예: 1.내용 2.내용)", state="error")
+            status_box.update(label="⚠️ 분할할 대본이 없습니다.", state="error")
             st.stop()
 
-        status_box.write(f"✅ {total_scenes}개 씬으로 파싱 완료.")
+        status_box.write(f"✅ 총 {total_scenes}개의 씬(이미지)으로 구성되었습니다.")
 
+        # [맥락 주입] 영상 제목이 없다면 첫 문장으로 대체하거나 요약
         current_video_title = st.session_state.get('video_title', "").strip()
         if not current_video_title:
-            current_video_title = "전반적인 대본 분위기에 어울리는 배경 (Context based on the script)"
+            # 제목이 없으면 전체 대본의 앞부분을 요약해서 맥락으로 사용
+            current_video_title = f"Context: {script_input[:200]}..."
 
-        # 2. 프롬프트 생성 (병렬)
-        status_box.write(f"📝 프롬프트 작성 중 ({GEMINI_TEXT_MODEL_NAME})...")
+        # -------------------------------------------------------
+        # 2. 프롬프트 생성 (병렬) - 기존 로직 유지
+        # -------------------------------------------------------
+        status_box.write(f"📝 씬별 프롬프트 작성 중 ({GEMINI_TEXT_MODEL_NAME})...")
         prompts = []
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = []
