@@ -899,261 +899,18 @@ with st.sidebar:
 
     style_instruction = st.text_area("AI에게 지시할 그림 스타일", value=default_style.strip(), height=150)
     st.markdown("---")
-    
-    # [NEW] Supertone TTS 설정 (secrets.toml 적용)
-    st.subheader("🎙️ Supertone TTS 설정")
-    
-    # Base URL은 보통 안 바뀌므로 기본값 유지
-    supertone_base_url = st.text_input("API 주소 (Base URL)", value=DEFAULT_SUPERTONE_URL)
-    
-    # API Key 자동 로드
-    if "general" in st.secrets and "supertone_api_key" in st.secrets["general"]:
-        supertone_api_key = st.secrets["general"]["supertone_api_key"]
-        st.success("🔑 Supertone API Key가 로드되었습니다.")
-    else:
-        supertone_api_key = st.text_input("🔑 Supertone API Key", type="password")
-    
-    # 목소리 목록 관리
-    if 'supertone_voices' not in st.session_state:
-        st.session_state['supertone_voices'] = []
-    
-    # 연결 테스트 버튼
-    if supertone_api_key:
-        if st.button("🔌 연결 테스트 및 목소리 갱신"):
-            with st.spinner("목소리 리스트 조회 중..."):
-                success, voices, msg = check_connection_and_get_voices(supertone_api_key, supertone_base_url)
-                if success:
-                    st.session_state['supertone_voices'] = voices
-                    st.success(f"{msg} ({len(voices)}개)")
-                else:
-                    st.error(msg)
-                    st.session_state['supertone_voices'] = []
-    
-    # 목소리 선택 UI
-    available_voices = []
-    selected_voice_id = ""
-    
-    if st.session_state['supertone_voices']:
-        raw_list = st.session_state['supertone_voices']
-        valid_voices = [v for v in raw_list if isinstance(v, dict) and 'name' in v and 'voice_id' in v]
-        if valid_voices:
-            voice_options = {f"{v['name']} ({v['voice_id']})": v['voice_id'] for v in valid_voices}
-            selected_voice_label = st.selectbox("목소리 선택", list(voice_options.keys()))
-            selected_voice_id = voice_options[selected_voice_label]
-            
-            # 썸네일 표시
-            current_voice = next((v for v in valid_voices if v['voice_id'] == selected_voice_id), None)
-            if current_voice and current_voice.get('thumbnail_image_url'):
-                st.image(current_voice['thumbnail_image_url'], width=100)
-    else:
-        # 연결 안 되었을 때 수동 입력창
-        selected_voice_id = st.text_input("Voice ID 직접 입력", value=DEFAULT_VOICE_ID)
-    
-    st.caption("TTS 옵션")
-    tts_speed = st.slider("말하기 속도", 0.5, 2.0, 1.0, 0.1)
-    tts_pitch = st.slider("피치 조절", -12, 12, 0, 1)
 
-    st.markdown("---")
     max_workers = st.slider("작업 속도(병렬 수)", 1, 10, 5)
 
-# ==========================================
-# [UI] 메인 화면 1: 대본 구조화 및 생성
-# ==========================================
-st.title("🎨 이미지 생성기")
-st.caption("번호로 분할된 대본(1. 2. 3.)을 입력하면 씬별 이미지를 생성합니다.")
-
-# 세션 초기화
-if 'structured_content' not in st.session_state:
-    st.session_state['structured_content'] = None
-if 'section_scripts' not in st.session_state:
-    st.session_state['section_scripts'] = {}
-if 'video_title' not in st.session_state:
-    st.session_state['video_title'] = ""
-if 'user_initial_title' not in st.session_state:
-    st.session_state['user_initial_title'] = ""
-
-# 1. 구조 분석 섹션
-with st.container(border=True):
-    user_title_input = st.text_input(
-        "📌 영상 제목 (선택사항)", 
-        placeholder="이 제목을 입력하면 나중에 이미지 생성 단계에서 이와 유사한 제목들을 추천받을 수 있습니다.",
-        help="비워두면 대본 내용을 바탕으로 AI가 알아서 제목을 추천합니다."
-    )
-
-    raw_script = st.text_area("✍️ 분석할 원고(대본)를 여기에 붙여넣으세요:", height=200, placeholder="안녕하세요, 오늘은...")
-    analyze_btn = st.button("🔍 구조 분석 실행", width="stretch", type="primary")
-
-    if analyze_btn:
-        if not api_key:
-            st.error("⚠️ 사이드바에서 Google API Key를 먼저 입력해주세요.")
-        elif not raw_script:
-            st.warning("⚠️ 분석할 대본 내용이 없습니다.")
-        else:
-            st.session_state['user_initial_title'] = user_title_input
-
-            client = genai.Client(api_key=api_key)
-            with st.status("대본 내용 분석 중...", expanded=True) as status:
-                status.write(f"🧠 Gemini가 내용을 읽고 구조를 잡고 있습니다...")
-                result_text = generate_structure(client, raw_script)
-                
-                st.session_state['structured_content'] = result_text
-                st.session_state['section_scripts'] = {} 
-
-                import re
-                match = re.search(r'^\s*1\.\s*\*\*(.*?)\*\*:\s*(.*)', result_text, re.MULTILINE)
-                if match:
-                    extracted = match.group(2).strip() if match.group(2).strip() else match.group(1).strip()
-                    st.session_state['video_title'] = re.sub(r'\(.*?\)', '', extracted).strip()
-                else:
-                    st.session_state['video_title'] = user_title_input if user_title_input else "제목을 찾을 수 없음"
-
-                status.update(label="✅ 분석 완료! 제목이 추출되었습니다.", state="complete", expanded=False)
-
-# 2. 대본 생성 섹션
-if st.session_state['structured_content']:
-    st.divider()
-    st.subheader("📑 대본 구조화 결과")
-    st.markdown(st.session_state['structured_content'])
-    
-    st.info(f"📌 **추출된 영상 제목:** {st.session_state['video_title']} (이미지 생성 단계에서 수정 가능)")
-
-    st.divider()
-    st.subheader("⚡ 롱폼 대본 전체 일괄 생성 (병렬 처리)")
-    st.caption("🚀 버튼 한번으로 모든 챕터를 동시에 작성합니다. (15분/20분/25분 옵션)")
-
-    lines = st.session_state['structured_content'].split('\n')
-    chapter_titles = ["Intro (도입부)"]
-    found_chapters = re.findall(r'(?:Chapter|챕터)\s*\d+.*', st.session_state['structured_content'])
-    seen = set()
-    for ch in found_chapters:
-        clean_ch = ch.replace('*', '').strip()
-        if clean_ch not in seen:
-            chapter_titles.append(clean_ch)
-            seen.add(clean_ch)
-    chapter_titles.append("Epilogue (결론)")
-    
-    for title in chapter_titles:
-        if title not in st.session_state['section_scripts']:
-            st.session_state['section_scripts'][title] = ""
-
-    with st.container(border=True):
-        batch_instruction = st.text_area(
-            "📢 전체 대본 작성 지침 (선택 사항)", 
-            placeholder="예: 아주 비판적인 어조로 써줘 / 초등학생도 이해하기 쉽게 비유를 많이 들어줘 / 반말(평어)로 작성해줘 등",
-            height=70
-        )
-
-        col_batch1, col_batch2 = st.columns([1, 1])
-        with col_batch1:
-            target_time = st.radio(
-                "🎬 총 영상 목표 시간 (텍스트 분량)",
-                ("15분 (약 7,000자)", "20분 (약 10,000자)", "25분 (약 13,000자)"),
-                index=1
-            )
-            if "15분" in target_time: batch_duration_type = "2min" 
-            elif "20분" in target_time: batch_duration_type = "3min" 
-            else: batch_duration_type = "4min"
-
-        with col_batch2:
-            st.write("")
-            st.write("") 
-            st.write("") 
-            batch_btn = st.button("🚀 전체 대본 동시 생성 시작", type="primary", use_container_width=True)
-
-    if batch_btn:
-        if not api_key:
-            st.error("⚠️ Google API Key가 필요합니다.")
-        else:
-            client = genai.Client(api_key=api_key)
-            status_box = st.status("🚀 AI가 지침을 반영하여 모든 챕터를 작성 중입니다...", expanded=True)
-            progress_bar = status_box.progress(0)
-            
-            total_tasks = len(chapter_titles)
-            completed_tasks = 0
-            
-            with ThreadPoolExecutor(max_workers=10) as executor:
-                future_to_title = {}
-                for title in chapter_titles:
-                    is_fixed = any(x in title for x in ["Intro", "Epilogue", "도입부", "결론"])
-                    current_duration = "fixed" if is_fixed else batch_duration_type
-                    
-                    future = executor.submit(
-                        generate_section, 
-                        client, 
-                        title, 
-                        st.session_state['structured_content'], 
-                        current_duration, 
-                        batch_instruction
-                    )
-                    future_to_title[future] = title
-                
-                for future in as_completed(future_to_title):
-                    title = future_to_title[future]
-                    try:
-                        result_text = future.result()
-                        st.session_state['section_scripts'][title] = result_text
-                        st.session_state[f"txt_{title}"] = result_text 
-                        completed_tasks += 1
-                        progress_bar.progress(completed_tasks / total_tasks)
-                        status_box.write(f"✅ 완료: {title}")
-                    except Exception as e:
-                        status_box.error(f"❌ 실패 ({title}): {e}")
-            
-            status_box.update(label="✨ 전체 생성 완료! 아래에서 확인하세요.", state="complete", expanded=False)
-            time.sleep(1)
-            st.rerun()
-
-    st.subheader("📝 섹션별 확인 및 수정")
-    full_combined_script = ""
-    
-    for title in chapter_titles:
-        with st.expander(f"📌 {title}", expanded=False):
-            is_intro_epilogue = any(x in title for x in ["Intro", "Epilogue", "도입부", "결론"])
-            
-            if is_intro_epilogue:
-                if st.button(f"🔄 {title} 다시 생성", key=f"r_fix_{title}"):
-                    client = genai.Client(api_key=api_key)
-                    with st.spinner("재생성 중..."):
-                        result = generate_section(client, title, st.session_state['structured_content'], "fixed")
-                        st.session_state['section_scripts'][title] = result
-                        st.session_state[f"txt_{title}"] = result 
-                        st.rerun()
-            else:
-                c_cols = st.columns(3)
-                def regen(dur):
-                    client = genai.Client(api_key=api_key)
-                    with st.spinner(f"{dur} 모드로 재생성 중..."):
-                        dur_code = "2min" if "2분" in dur else "3min" if "3분" in dur else "4min"
-                        result = generate_section(client, title, st.session_state['structured_content'], dur_code)
-                        st.session_state['section_scripts'][title] = result
-                        st.session_state[f"txt_{title}"] = result
-                        st.rerun()
-
-                if c_cols[0].button("🔄 다시 생성 (2분)", key=f"r2_{title}"): regen("2분")
-                if c_cols[1].button("🔄 다시 생성 (3분)", key=f"r3_{title}"): regen("3분")
-                if c_cols[2].button("🔄 다시 생성 (4분)", key=f"r4_{title}"): regen("4분")
-
-            if f"txt_{title}" not in st.session_state:
-                st.session_state[f"txt_{title}"] = st.session_state['section_scripts'].get(title, "")
-
-            new_text = st.text_area(label="📜 대본 내용 (수정 가능)", height=300, key=f"txt_{title}")
-            st.session_state['section_scripts'][title] = new_text
-        
-        if st.session_state['section_scripts'].get(title):
-            full_combined_script += st.session_state['section_scripts'][title] + "\n\n"
-
-    if full_combined_script:
-        st.divider()
-        st.subheader("📦 최종 완성 대본")
-        col_info, col_down = st.columns([3, 1])
-        with col_info:
-            st.caption(f"📝 총 글자 수: {len(full_combined_script)}자 (공백 포함)")
-        with col_down:
-            st.download_button(label="💾 대본 다운로드 (.txt)", data=full_combined_script, file_name="final_script.txt", mime="text/plain", use_container_width=True)
-        st.text_area("아래 내용을 복사하거나 위 버튼을 눌러 저장하세요", value=full_combined_script, height=500)
+    # [TTS 비활성화] Supertone TTS 설정 제거됨 - 기본값으로 비활성화
+    supertone_api_key = ""
+    supertone_base_url = DEFAULT_SUPERTONE_URL
+    selected_voice_id = ""
+    tts_speed = 1.0
+    tts_pitch = 0
 
 # ==========================================
-# [수정된 UI] 메인 화면 3: 이미지 생성
+# [수정된 UI] 메인 화면: 이미지 생성
 # ==========================================
 st.divider()
 st.title("🖼️ 씬별 이미지 생성")
@@ -1169,68 +926,37 @@ if 'title_candidates' not in st.session_state:
 
 col_title_input, col_title_btn = st.columns([4, 1])
 
-# [수정됨] 버튼 로직: 구조 분석이 없어도 제목 입력이 있으면 작동하도록 변경
+# [수정됨] 버튼 로직: 제목 입력 기반으로 추천
 with col_title_btn:
-    st.write("") 
-    st.write("") 
-    if st.button("💡 제목 5개 추천", help="입력한 키워드나 대본을 바탕으로 제목을 추천합니다.", use_container_width=True):
-        # 현재 입력된 제목(주제) 가져오기
+    st.write("")
+    st.write("")
+    if st.button("💡 제목 5개 추천", help="입력한 키워드를 바탕으로 제목을 추천합니다.", use_container_width=True):
         current_user_title = st.session_state.get('video_title', "").strip()
-        has_structure = st.session_state.get('structured_content')
 
         if not api_key:
             st.error("API Key 필요")
-        # [핵심 수정] 구조 분석도 안 했고, 제목 입력도 없으면 경고
-        elif not has_structure and not current_user_title:
-            st.warning("⚠️ '구조 분석'을 먼저 하거나, 왼쪽에 '주제'를 입력해주세요.")
+        elif not current_user_title:
+            st.warning("⚠️ 먼저 '주제'를 입력해주세요.")
         else:
             client = genai.Client(api_key=api_key)
             with st.spinner("AI가 최적의 제목을 고민 중입니다..."):
-                
-                # 1. 구조 분석 데이터는 없지만, 사용자가 입력한 주제는 있는 경우
-                if current_user_title and not has_structure:
-                    prompt_instruction = f"""
-                    [Target Topic]
-                    "{current_user_title}"
-                    [Task]
-                    Generate 5 click-bait YouTube video titles based on the Target Topic above.
-                    사용자가 입력한거랑 최대한 비슷한 제목으로 추천, '몰락'이 들어간 경우 맨 뒤에 몰락으로 끝나게 한다.
-                    """
-                    context_data = "No script provided. Base it solely on the topic."
-
-                # 2. 구조 분석 데이터가 있는 경우 (입력한 제목이 있으면 그것도 반영)
-                else:
-                    if current_user_title:
-                        prompt_instruction = f"""
-                        [Target Context]
-                        "{current_user_title}"
-                        [Task]
-                        Generate 5 variations of this title suitable for YouTube, considering the script below.
-                        '몰락'이 들어간 경우 맨 뒤에 몰락으로 끝나게 한다.
-                        """
-                    else:
-                        prompt_instruction = f"""
-                        [Task]
-                        Read the provided script structure and generate 5 catchy YouTube video titles in Korean.
-                        """
-                    context_data = st.session_state['structured_content']
-
                 title_prompt = f"""
                 [Role] You are a YouTube viral marketing expert.
-                {prompt_instruction}
-                
-                [Script Context]
-                {context_data}
-                
+                [Target Topic]
+                "{current_user_title}"
+                [Task]
+                Generate 5 click-bait YouTube video titles based on the Target Topic above.
+                사용자가 입력한거랑 최대한 비슷한 제목으로 추천, '몰락'이 들어간 경우 맨 뒤에 몰락으로 끝나게 한다.
+
                 [Output Format]
                 - Output ONLY the list of 5 titles.
                 - No numbering (1., 2.), just 5 lines of text.
                 - Language: Korean
                 """
-                
+
                 try:
                     resp = client.models.generate_content(
-                        model=GEMINI_TEXT_MODEL_NAME, 
+                        model=GEMINI_TEXT_MODEL_NAME,
                         contents=title_prompt
                     )
                     candidates = [line.strip() for line in resp.text.split('\n') if line.strip()]
@@ -1239,7 +965,7 @@ with col_title_btn:
                     for c in candidates:
                         clean = re.sub(r'^\d+\.\s*', '', c).replace('*', '').replace('"', '').strip()
                         if clean: clean_candidates.append(clean)
-                    
+
                     st.session_state['title_candidates'] = clean_candidates[:5]
                 except Exception as e:
                     st.error(f"오류 발생: {e}")
