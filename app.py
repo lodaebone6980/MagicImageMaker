@@ -284,7 +284,7 @@ def parse_numbered_script(script):
 # ==========================================
 # [UPGRADE] 함수: AI 기반 대본 맥락 분할 (글자수 제한 엄격화)
 # ==========================================
-def split_text_automatically(client, full_text, target_chars=390):
+def split_text_automatically(client, full_text, target_chars=330):
     """
     Gemini를 이용해 문맥(Context)을 파악하고,
     시각적 장면 전환이 필요한 지점마다 대본을 분할합니다.
@@ -321,9 +321,9 @@ def split_text_automatically(client, full_text, target_chars=390):
         return split_script_by_time(full_text, chars_per_chunk=target_chars)
 
 
-# [NEW] 규칙 기반 분할 함수 (390자 기준 엄격 분할)
-def split_script_by_time(script, chars_per_chunk=390):
-    """390자 기준 엄격 분할: 마지막 남은 글자도 무조건 별도 씬으로 분할"""
+# [NEW] 규칙 기반 분할 함수 (330자 기준 엄격 분할)
+def split_script_by_time(script, chars_per_chunk=330):
+    """330자 기준 엄격 분할: 마지막 남은 글자도 무조건 별도 씬으로 분할"""
     sentences = re.split(r'(?<=[.?!])\s+', script.strip())
     chunks = []
     current_chunk = ""
@@ -1197,7 +1197,7 @@ with col_input_opt:
         "한 씬당 목표 글자수",
         min_value=100,
         max_value=500,
-        value=390,
+        value=330,
         step=10,
         help="각 씬은 반드시 이 글자수 이하로 엄격히 분할됩니다."
     )
