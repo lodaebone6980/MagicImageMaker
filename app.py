@@ -321,36 +321,40 @@ def split_text_automatically(client, full_text, target_chars=390):
         return split_script_by_time(full_text, chars_per_chunk=target_chars)
 
 
-# [NEW] 규칙 기반 분할 함수 (남은 글자 합치기 금지, 엄격한 글자수 제한)
+# [NEW] 규칙 기반 분할 함수 (390자 기준 엄격 분할)
 def split_script_by_time(script, chars_per_chunk=390):
-    """
-    문장 단위로 분할하되, 글자수 제한을 엄격히 적용합니다.
-    남은 글자가 아무리 적어도 별도의 씬으로 분리합니다.
-    """
+    """390자 기준 엄격 분할: 마지막 남은 글자도 무조건 별도 씬으로 분할"""
     sentences = re.split(r'(?<=[.?!])\s+', script.strip())
     chunks = []
     current_chunk = ""
 
     for sentence in sentences:
-        # 문장 하나가 이미 제한을 넘을 경우 강제 분할
+        if not sentence.strip():
+            continue
+
+        # 현재 문장이 제한을 넘는 경우 (강제 절단)
         if len(sentence) > chars_per_chunk:
             if current_chunk:
                 chunks.append(current_chunk.strip())
-            temp_sentence = sentence
-            while len(temp_sentence) > chars_per_chunk:
-                chunks.append(temp_sentence[:chars_per_chunk].strip())
-                temp_sentence = temp_sentence[chars_per_chunk:]
-            current_chunk = temp_sentence
+                current_chunk = ""
+            temp = sentence
+            while len(temp) > chars_per_chunk:
+                chunks.append(temp[:chars_per_chunk].strip())
+                temp = temp[chars_per_chunk:]
+            current_chunk = temp
             continue
 
-        if len(current_chunk) + len(sentence) + 1 <= chars_per_chunk:
-            current_chunk += (" " + sentence if current_chunk else sentence)
-        else:
+        # 글자수 체크 (합쳤을 때 제한을 넘으면 현재까지를 씬으로 확정)
+        if len(current_chunk) + len(sentence) + 1 > chars_per_chunk:
             chunks.append(current_chunk.strip())
             current_chunk = sentence
+        else:
+            current_chunk = (current_chunk + " " + sentence).strip() if current_chunk else sentence
 
+    # [핵심] 마지막 남은 문장이 500자든 10자든 무조건 별개 씬으로 추가
     if current_chunk:
         chunks.append(current_chunk.strip())
+
     return chunks
 
 def make_filename(scene_num, text_chunk):
@@ -369,54 +373,57 @@ def make_filename(scene_num, text_chunk):
     return filename
 
 # ==========================================
-# [마스터 업그레이드] 함수: 프롬프트 생성 (화면 분할 금지 강화 + 번호 클렌징)
+# [마스터 업그레이드] 함수: 프롬프트 생성 (월드빌딩 + 환경적 일치 + 스토리 전개)
 # ==========================================
 def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, target_language="Korean"):
-    """[최종 마스터 버전] 화면 분할 완벽 차단 + 2D 셀 셰이딩 + 만화적 눈 + 풀착장"""
+    """[최종 마스터 버전] 맥락 인지형 월드빌딩 + 환경적 일치 + 캐릭터 행동 연출"""
     scene_num = index + 1
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TEXT_MODEL_NAME}:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
 
-    lang_guide = f"화면 속 모든 텍스트는 반드시 '{target_language}'(으)로만 작성하십시오."
+    lang_guide = f"화면 속 텍스트는 반드시 '{target_language}'(으)로만 정확히 표기하십시오."
 
-    # [수정] Suffix에서 단일 장면 강조 및 번호 매기기 금지 명시
+    # [핵심] 스타일 지침: 3D 제거, 상하의 착장, 캐릭터 눈, 환경 통합
     style_suffix = (
         ", **High-quality 2D flat animation style with subtle cell shading**. "
         "Strictly NO 3D, NO rendering. "
-        "The white stickman MUST be fully dressed (vibrant colorful shirt and long pants). "
-        "**Character's eyes MUST be expressive cartoon eyes: large white sclera with small black pupils**, NOT giant black dots. "
-        "**ONE SINGLE UNIFIED SCENE. DO NOT split the screen. DO NOT use multiple panels or grids. DO NOT use labels like 'Scene 1' or 'Panel 1'.** "
-        "Text must be in a clean box or bubble with a very thick black outline."
+        "The white stickman MUST be fully dressed (vibrant colorful top and trousers). "
+        "Character's eyes: large white sclera with small black pupils (cartoon expressive eyes). "
+        "**ONE SINGLE UNIFIED SCENE. NO split screens. NO generic square boxes or TV screens.** "
+        "**ENVIRONMENTAL INTEGRATION**: Text and data must be part of the world (e.g., as neon signs, massive stone monuments, or physical landscapes). "
+        "Text must have a thick high-pixel black outline."
     )
 
     full_instruction = f"""
-[Role] 2D 애니메이션 비주얼 디렉터
+[Role] 2D 애니메이션 월드빌딩 디렉터 (World-Building Director)
 
 [Style Guide]
 {style_instruction}
 
-[Mission]
-제공된 대본 조각을 바탕으로 **'단 하나의 통합된 장면'**을 위한 묘사 프롬프트를 작성하십시오.
+[Overall Context]
+- 전체 영상 제목: "{video_title}"
+- 현재 장면 순서: {scene_num}번째 장면
+- 전체적인 흐름을 고려하여, 단순히 정보를 나열하는 게 아니라 대본의 상황이 '물리적인 세계'에서 벌어지는 것처럼 연출하십시오.
 
-[절대 규칙 - 화면 분할 금지]
-1. **단일 구도:** 절대로 화면을 좌우나 위아래로 나누지 마십시오. (NO Split screen, NO multi-panels)
-2. **번호 매기기 금지:** 프롬프트 안에 '장면 1', '장면 2' 또는 'SCENE 1' 같은 번호를 절대 적지 마십시오. 이미지 모델이 이를 보고 화면을 칸만화처럼 나눕니다.
-3. **통합 묘사:** 대본의 여러 상황을 하나의 완성된 풍경 안에 자연스럽게 배치하십시오.
+[Visual Task: 대본과 환경의 일치]
+1. **박스형 연출 금지:** 텍스트나 그래프를 보여주기 위해 네모난 스크린, TV, 칠판을 배경에 두지 마십시오. 대신 그 정보들이 배경의 '일부'가 되게 하십시오.
+   - 예: 가격 상승 -> 캐릭터가 깎아지른 듯한 거대한 빨간 화살표 절벽을 기어올라가는 모습.
+   - 예: 경제 위기 -> 로고가 새겨진 건물이 밝은 도심 한가운데서 모래처럼 바스러지는 모습.
+2. **배경의 구체화:** 사무실을 벗어나십시오. 활기찬 시장, 가파른 산길, 비바람이 치는 들판(밝게), 거대한 톱니바퀴가 돌아가는 공장 등 대본의 '감정'에 맞는 장소를 선택하십시오.
+3. **캐릭터의 연기:** 스틱맨은 단순히 서 있지 않고, 배경의 상황에 직접 반응해야 합니다. (무거운 짐을 들거나, 가파른 길을 오르거나, 부서지는 물체를 보며 경악하는 등)
+4. **전개성:** 이전 장면들과 이어지는 하나의 '이야기'처럼 느껴지도록 풍경의 디테일을 설정하십시오.
 
-[캐릭터 및 텍스트]
-- **눈 모양:** 놀람/당황 시 '커다란 하얀 눈자위 안에 작은 검은색 눈동자'를 그리십시오. (점눈 절대 금지)
-- **의상:** 상의와 하의(긴 바지)를 모두 입은 컬러풀한 복장의 스틱맨.
-- **셰이딩:** 캐릭터와 옷에 옅은 2D 셀 셰이딩(그림자) 효과 적용.
-- **텍스트:** {lang_guide} (말풍선이나 박스 안에 배치, 두꺼운 외곽선 필수)
+[캐릭터 및 텍스트 기술 지침]
+- **눈:** 하얀 눈자위 안에 작은 검은색 눈동자 (놀람, 슬픔 등 감정 표현).
+- **의상:** 상하의를 갖춰 입은 컬러풀한 의상.
+- **텍스트:** {lang_guide} (사물 위나 말풍선에 배치하되 두꺼운 외곽선 사용).
+- **단일 장면:** 화면 분할이나 번호 매기기 절대 금지.
 
-[경제학적 연출]
-- '몰락'이나 '가격 상승' 테마라도 밝은 조명을 유지하고, 깨진 상징물이나 하락 그래프 등으로 상황을 표현하십시오.
-
-[대본 조각]
+[현재 대본 조각]
 "{text_chunk}"
 
 [Output]
-- **번호나 제목 없이**, 오직 이미지 생성용 한국어 묘사 문단 하나만 출력하십시오.
+- 번호 없이, 캐릭터의 행동과 배경의 상호작용이 돋보이는 한국어 프롬프트 문단 하나만 출력하십시오.
 """
 
     payload = {"contents": [{"parts": [{"text": full_instruction}]}]}
@@ -424,17 +431,11 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
     try:
         response = requests.post(url, headers=headers, data=json.dumps(payload))
         if response.status_code == 200:
-            try:
-                generated_text = response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
-                # [추가] 혹시 AI가 ### SCENE 등을 넣었을 경우를 대비한 클렌징
-                generated_text = re.sub(r'#+\s*SCENE\s*\d+', '', generated_text, flags=re.IGNORECASE)
-                generated_text = re.sub(r'장면\s*\d+', '', generated_text)
-                generated_text = re.sub(r'씬\s*\d+', '', generated_text)
-                generated_text = re.sub(r'Scene\s*\d+', '', generated_text, flags=re.IGNORECASE)
+            generated_text = response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+            # 안전장치: SCENE 번호나 분할 단어 제거
+            generated_text = re.sub(r'#+\s*SCENE\s*\d+|장면\s*\d+|씬\s*\d+', '', generated_text, flags=re.IGNORECASE)
 
-                final_prompt = f"{generated_text.rstrip('.')}{style_suffix}"
-            except:
-                final_prompt = text_chunk + style_suffix
+            final_prompt = f"{generated_text.rstrip('.')}{style_suffix}"
             return (scene_num, final_prompt)
         else:
             return (scene_num, f"Error: {response.status_code}")
