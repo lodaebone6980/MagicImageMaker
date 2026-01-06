@@ -284,12 +284,12 @@ def parse_numbered_script(script):
 # ==========================================
 # [UPGRADE] 함수: AI 기반 대본 맥락 분할 (글자수 제한 엄격화)
 # ==========================================
-def split_text_automatically(client, full_text, target_chars=140):
+def split_text_automatically(client, full_text, target_chars=160):
     """
     Gemini를 이용해 문맥(Context)을 파악하고,
     시각적 장면 전환이 필요한 지점마다 대본을 분할합니다.
     각 씬은 반드시 target_chars 이하로 제한됩니다.
-    (20분 기준 50~55장 = 약 22~24초/장 = 약 140자)
+    (20분 기준 약 65장 = 약 27초/장 = 약 160자)
     """
     prompt = f"""
     [Role] Video Storyboard Editor
@@ -322,9 +322,9 @@ def split_text_automatically(client, full_text, target_chars=140):
         return split_script_by_time(full_text, chars_per_chunk=target_chars)
 
 
-# [NEW] 규칙 기반 분할 함수 (140자 기준 엄격 분할)
-def split_script_by_time(script, chars_per_chunk=140):
-    """140자 기준 엄격 분할: 20분 영상 50~55장 기준 (약 22~24초/장)"""
+# [NEW] 규칙 기반 분할 함수 (160자 기준 엄격 분할)
+def split_script_by_time(script, chars_per_chunk=160):
+    """160자 기준 엄격 분할: 20분 영상 약 65장 기준 (약 27초/장)"""
     sentences = re.split(r'(?<=[.?!])\s+', script.strip())
     chunks = []
     current_chunk = ""
@@ -1297,9 +1297,9 @@ with col_input_opt:
         "한 씬당 목표 글자수",
         min_value=100,
         max_value=500,
-        value=140,
+        value=160,
         step=10,
-        help="20분 기준 50~55장 = 약 140자 (22~24초/장)"
+        help="20분 기준 약 65장 = 약 160자 (27초/장)"
     )
     st.caption(f"약 {scene_duration}자 ≈ {scene_duration // 6}초 분량 | 20분 기준 약 {1200 // (scene_duration // 6)}장")
 
@@ -1349,7 +1349,7 @@ if split_btn:
                 all_scenes.extend(intro_scenes)
                 st.info(f"🎬 도입부: {len(intro_scenes)}개 씬 (4~8초)")
 
-            # 2. 본문 분할 (140자 기준 - 20분 50~55장)
+            # 2. 본문 분할 (160자 기준 - 20분 약 65장)
             if script_input and script_input.strip():
                 main_scenes = split_text_automatically(preview_client, script_input, target_chars=scene_duration)
                 all_scenes.extend(main_scenes)
@@ -1410,7 +1410,7 @@ if start_btn:
             chunks.extend(intro_chunks)
             status_box.write(f"✅ 도입부: {len(intro_chunks)}개 씬")
 
-        # 2. 본문 분할 (370자 기준)
+        # 2. 본문 분할 (160자 기준 - 20분 약 65장)
         if script_input and script_input.strip():
             status_box.write(f"📝 본문을 분할하는 중... (기준: 약 {scene_duration}자)")
             main_chunks = split_text_automatically(client, script_input, target_chars=scene_duration)
