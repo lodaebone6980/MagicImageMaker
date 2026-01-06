@@ -1398,23 +1398,32 @@ if start_btn:
         progress_bar = st.progress(0)
 
         # -------------------------------------------------------
-        # [핵심] 도입부 + 본문 분할
+        # [최적화] 미리보기로 분할된 씬이 있으면 재사용, 없으면 새로 분할
         # -------------------------------------------------------
-        chunks = []
+        if st.session_state.get('split_scenes') and len(st.session_state['split_scenes']) > 0:
+            # 미리보기에서 이미 분할된 씬 사용
+            chunks = st.session_state['split_scenes']
+            status_box.write(f"✅ 미리보기에서 분할된 {len(chunks)}개 씬 사용")
+        else:
+            # 미리보기 없이 바로 시작한 경우 → 새로 분할
+            chunks = []
 
-        # 1. 도입부 분할 (10~13개 씬 타겟, 평균 5.8초)
-        if intro_input and intro_input.strip():
-            status_box.write("🎬 도입부를 분할하는 중... (10~13개 씬 타겟)")
-            intro_chunks = split_intro_by_meaning(client, intro_input)
-            chunks.extend(intro_chunks)
-            status_box.write(f"✅ 도입부: {len(intro_chunks)}개 씬 (평균 5.8초)")
+            # 1. 도입부 분할 (10~13개 씬 타겟, 평균 5.8초)
+            if intro_input and intro_input.strip():
+                status_box.write("🎬 도입부를 분할하는 중... (10~13개 씬 타겟)")
+                intro_chunks = split_intro_by_meaning(client, intro_input)
+                chunks.extend(intro_chunks)
+                status_box.write(f"✅ 도입부: {len(intro_chunks)}개 씬 (평균 5.8초)")
 
-        # 2. 본문 분할 (170~240자 범위, 50~55개 타겟)
-        if script_input and script_input.strip():
-            status_box.write("📝 본문을 분할하는 중... (170~240자, 50~55개 타겟)")
-            main_chunks = split_text_automatically(client, script_input)
-            chunks.extend(main_chunks)
-            status_box.write(f"✅ 본문: {len(main_chunks)}개 씬 (평균 30초)")
+            # 2. 본문 분할 (170~240자 범위, 50~55개 타겟)
+            if script_input and script_input.strip():
+                status_box.write("📝 본문을 분할하는 중... (170~240자, 50~55개 타겟)")
+                main_chunks = split_text_automatically(client, script_input)
+                chunks.extend(main_chunks)
+                status_box.write(f"✅ 본문: {len(main_chunks)}개 씬 (평균 30초)")
+
+            # 분할된 씬을 session_state에 저장
+            st.session_state['split_scenes'] = chunks
 
         total_scenes = len(chunks)
 
@@ -1422,10 +1431,7 @@ if start_btn:
             status_box.update(label="⚠️ 분할 실패.", state="error")
             st.stop()
 
-        status_box.write(f"✅ AI 분석 완료: 총 {total_scenes}개의 장면으로 구성되었습니다.")
-
-        # [중요] 분할된 씬을 session_state에 저장 (결과물 위에 표시하기 위해)
-        st.session_state['split_scenes'] = chunks
+        status_box.write(f"✅ 총 {total_scenes}개의 장면으로 이미지 생성을 시작합니다.")
 
         # [맥락 주입] 영상 제목이 없다면 첫 문장으로 대체
         current_video_title = st.session_state.get('video_title', "").strip()
