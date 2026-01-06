@@ -284,7 +284,7 @@ def parse_numbered_script(script):
 # ==========================================
 # [UPGRADE] 함수: AI 기반 대본 맥락 분할 (글자수 제한 엄격화)
 # ==========================================
-def split_text_automatically(client, full_text, target_chars=330):
+def split_text_automatically(client, full_text, target_chars=345):
     """
     Gemini를 이용해 문맥(Context)을 파악하고,
     시각적 장면 전환이 필요한 지점마다 대본을 분할합니다.
@@ -321,9 +321,9 @@ def split_text_automatically(client, full_text, target_chars=330):
         return split_script_by_time(full_text, chars_per_chunk=target_chars)
 
 
-# [NEW] 규칙 기반 분할 함수 (330자 기준 엄격 분할)
-def split_script_by_time(script, chars_per_chunk=330):
-    """330자 기준 엄격 분할: 마지막 남은 글자도 무조건 별도 씬으로 분할"""
+# [NEW] 규칙 기반 분할 함수 (345자 기준 엄격 분할)
+def split_script_by_time(script, chars_per_chunk=345):
+    """345자 기준 엄격 분할: 마지막 남은 글자도 무조건 별도 씬으로 분할"""
     sentences = re.split(r'(?<=[.?!])\s+', script.strip())
     chunks = []
     current_chunk = ""
@@ -357,6 +357,89 @@ def split_script_by_time(script, chars_per_chunk=330):
 
     return chunks
 
+
+# ==========================================
+# [NEW] 도입부 분할 함수 (34자 이하, 의미 기준 분할)
+# ==========================================
+def split_intro_by_meaning(client, intro_text, max_chars=34):
+    """
+    도입부를 의미 단위로 분할합니다.
+    각 씬은 6초 이하(약 34자)로 제한됩니다.
+    """
+    if not intro_text or not intro_text.strip():
+        return []
+
+    prompt = f"""
+[Role] Short-form Video Editor (숏폼 영상 편집자)
+
+[Task]
+아래 [도입부 대본]을 **의미 단위**로 나누어 짧은 씬들로 분할하세요.
+각 씬은 6초 이하로 읽을 수 있는 분량이어야 합니다.
+
+[Rules]
+1. **글자수 제한:** 각 씬은 반드시 **{max_chars}자 이하**여야 합니다.
+2. **의미 단위 분할:** 문장을 억지로 자르지 말고, 의미가 완결되는 지점에서 나누세요.
+3. **짧은 임팩트:** "바로 삼성입니다" 같은 짧은 문장은 그 자체로 하나의 씬이 됩니다.
+4. **자연스러운 끊김:** 쉼표(,)나 문장 구조를 활용해 자연스럽게 분할하세요.
+
+[예시]
+입력: "한 기업이 삼십년 만에 자동차 시장에 다시 발을 들였습니다. 바로 삼성입니다."
+출력: ["한 기업이 30년 만에 자동차 시장에 다시 발을 들였습니다", "바로 삼성입니다"]
+
+[도입부 대본]
+{intro_text}
+
+[Output]
+- JSON 배열 형식으로만 출력하세요. 설명 없이 배열만 반환하세요.
+"""
+
+    try:
+        response = client.models.generate_content(
+            model=GEMINI_TEXT_MODEL_NAME,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        )
+        scenes = json.loads(response.text)
+        if isinstance(scenes, list):
+            return [s.strip() for s in scenes if s.strip()]
+        else:
+            return split_intro_fallback(intro_text, max_chars)
+    except Exception as e:
+        print(f"Intro Split Error: {e}")
+        return split_intro_fallback(intro_text, max_chars)
+
+
+def split_intro_fallback(intro_text, max_chars=34):
+    """도입부 분할 폴백: 문장 부호 기준으로 분할"""
+    # 마침표, 쉼표, 물음표, 느낌표 기준으로 분할
+    parts = re.split(r'(?<=[.,?!])\s*', intro_text.strip())
+    chunks = []
+    current = ""
+
+    for part in parts:
+        if not part.strip():
+            continue
+        if len(part) <= max_chars:
+            chunks.append(part.strip())
+        elif len(current) + len(part) + 1 <= max_chars:
+            current = (current + " " + part).strip() if current else part
+        else:
+            if current:
+                chunks.append(current.strip())
+            # 긴 문장은 강제 분할
+            while len(part) > max_chars:
+                chunks.append(part[:max_chars].strip())
+                part = part[max_chars:]
+            current = part
+
+    if current:
+        chunks.append(current.strip())
+
+    return chunks
+
+
 def make_filename(scene_num, text_chunk):
     clean_line = text_chunk.replace("\n", " ").strip()
     clean_line = re.sub(r'[\\/:*?"<>|]', "", clean_line)
@@ -373,10 +456,10 @@ def make_filename(scene_num, text_chunk):
     return filename
 
 # ==========================================
-# [마스터 업그레이드] 함수: 프롬프트 생성 (월드빌딩 + 환경적 일치 + 스토리 전개)
+# [마스터 업그레이드] 함수: 프롬프트 생성 (범용 월드빌딩 + 환경적 일치 + 스토리 전개)
 # ==========================================
 def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, target_language="Korean"):
-    """[최종 마스터 버전] 맥락 인지형 월드빌딩 + 환경적 일치 + 캐릭터 행동 연출"""
+    """[최종 마스터 버전] 범용 맥락 인지형 월드빌딩 + 환경적 일치 + 캐릭터 행동 연출"""
     scene_num = index + 1
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TEXT_MODEL_NAME}:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
@@ -406,18 +489,20 @@ def generate_prompt(api_key, index, text_chunk, style_instruction, video_title, 
 - 전체적인 흐름을 고려하여, 단순히 정보를 나열하는 게 아니라 대본의 상황이 '물리적인 세계'에서 벌어지는 것처럼 연출하십시오.
 
 [Visual Task: 대본과 환경의 일치]
-1. **박스형 연출 금지:** 텍스트나 그래프를 보여주기 위해 네모난 스크린, TV, 칠판을 배경에 두지 마십시오. 대신 그 정보들이 배경의 '일부'가 되게 하십시오.
-   - 예: 가격 상승 -> 캐릭터가 깎아지른 듯한 거대한 빨간 화살표 절벽을 기어올라가는 모습.
-   - 예: 경제 위기 -> 로고가 새겨진 건물이 밝은 도심 한가운데서 모래처럼 바스러지는 모습.
-2. **배경의 구체화:** 사무실을 벗어나십시오. 활기찬 시장, 가파른 산길, 비바람이 치는 들판(밝게), 거대한 톱니바퀴가 돌아가는 공장 등 대본의 '감정'에 맞는 장소를 선택하십시오.
-3. **캐릭터의 연기:** 스틱맨은 단순히 서 있지 않고, 배경의 상황에 직접 반응해야 합니다. (무거운 짐을 들거나, 가파른 길을 오르거나, 부서지는 물체를 보며 경악하는 등)
+1. **박스형 연출 금지:** 텍스트나 데이터를 보여주기 위해 네모난 스크린, TV, 칠판을 배경에 두지 마십시오. 대신 그 정보들이 배경의 '일부'가 되게 하십시오.
+   - 예: 중요한 숫자/금액 -> 거대한 네온사인이나 하늘에 떠 있는 홀로그램처럼 표현
+   - 예: 도전/성장 -> 캐릭터가 가파른 산을 오르거나 넓은 바다를 항해하는 모습
+   - 예: 위기/변화 -> 건물이 변형되거나 풍경이 극적으로 바뀌는 모습
+2. **배경의 구체화:** 사무실을 벗어나십시오. 활기찬 도시, 광활한 자연, 미래적인 공간, 역동적인 현장 등 대본의 '감정과 주제'에 맞는 장소를 선택하십시오.
+3. **캐릭터의 연기:** 스틱맨은 단순히 서 있지 않고, 배경의 상황에 직접 반응해야 합니다. (달리기, 점프, 놀람, 환호, 고민 등 상황에 맞는 동작)
 4. **전개성:** 이전 장면들과 이어지는 하나의 '이야기'처럼 느껴지도록 풍경의 디테일을 설정하십시오.
 
 [캐릭터 및 텍스트 기술 지침]
-- **눈:** 하얀 눈자위 안에 작은 검은색 눈동자 (놀람, 슬픔 등 감정 표현).
+- **눈:** 하얀 눈자위 안에 작은 검은색 눈동자 (놀람, 슬픔, 기쁨 등 감정 표현).
 - **의상:** 상하의를 갖춰 입은 컬러풀한 의상.
 - **텍스트:** {lang_guide} (사물 위나 말풍선에 배치하되 두꺼운 외곽선 사용).
 - **단일 장면:** 화면 분할이나 번호 매기기 절대 금지.
+- **밝은 톤:** 어두운 주제라도 밝은 조명을 유지하고 시각적 상징물로 표현.
 
 [현재 대본 조각]
 "{text_chunk}"
@@ -1183,31 +1268,44 @@ if 'section_scripts' in st.session_state and st.session_state['section_scripts']
             st.rerun()
 
 # ==========================================
-# [UI] 메인 화면: 대본 입력 및 AI 씬 분할
+# [UI] 메인 화면: 대본 입력 (도입부 + 본문 분리)
 # ==========================================
 st.divider()
-st.subheader("📜 대본 입력 (AI 자동 분할)")
-st.caption("대본 전체를 복사해서 붙여넣으세요. AI가 문맥에 맞춰 자동으로 씬을 나눠줍니다.")
+st.subheader("📜 대본 입력 (도입부 / 본문 분리)")
 
+# 도입부 입력
+st.markdown("### 🎬 도입부 (인트로)")
+st.caption("도입부는 **6초 이하(34자)** 단위로 의미 기준 분할됩니다. 짧고 임팩트 있는 문장들로 구성하세요.")
+intro_input = st.text_area(
+    "도입부 대본",
+    height=120,
+    placeholder="예시:\n한 기업이 삼십년 만에 자동차 시장에 다시 발을 들였습니다. 바로 삼성입니다. 하지만 이번엔 SM5 같은 차를 만들겠다는 게 아닙니다.",
+    key="intro_input"
+)
+
+st.markdown("---")
+
+# 본문 입력
+st.markdown("### 📝 본문")
 col_input_opt, col_input_txt = st.columns([1, 3])
 
 with col_input_opt:
-    st.info("⏱️ 씬 분할 설정")
+    st.info("⏱️ 본문 씬 분할 설정")
     scene_duration = st.slider(
         "한 씬당 목표 글자수",
         min_value=100,
         max_value=500,
-        value=330,
+        value=345,
         step=10,
-        help="각 씬은 반드시 이 글자수 이하로 엄격히 분할됩니다."
+        help="본문의 각 씬은 이 글자수 이하로 분할됩니다."
     )
     st.caption(f"약 {scene_duration}자 ≈ {scene_duration // 6}초 분량")
 
 with col_input_txt:
     script_input = st.text_area(
-        "전체 대본 붙여넣기",
-        height=300,
-        placeholder="대본을 그대로 붙여넣으세요. AI가 문맥을 파악해 자동으로 씬을 나눕니다.\n\n예시:\n안녕하세요. 오늘은 경제 위기에 대해 이야기해보려 합니다. 최근 뉴스를 보면 많은 기업들이 어려움을 겪고 있습니다. 하지만 위기 속에서도 기회를 찾는 사람들이 있죠. 이런 상황에서 우리는 어떻게 해야 할까요?",
+        "본문 대본",
+        height=250,
+        placeholder="본문 대본을 붙여넣으세요. AI가 문맥을 파악해 자동으로 씬을 나눕니다.\n\n예시:\n삼성이 노리는 건 자동차의 껍데기가 아니라 영혼입니다. 2조 6천억 원, 웬만한 대기업 시가총액에 맞먹는 돈을 베팅했습니다...",
         key="image_gen_input"
     )
 
@@ -1232,17 +1330,31 @@ with col_gen_btn:
         st.session_state['generated_results'] = []
     start_btn = st.button("🚀 이미지 생성 시작", type="primary", use_container_width=True, on_click=clear_generated_results)
 
-# [씬 분할 미리보기 처리]
+# [씬 분할 미리보기 처리] - 도입부 + 본문 통합
 if split_btn:
     if not api_key:
         st.error("⚠️ Google API Key를 입력해주세요.")
-    elif not script_input:
-        st.warning("⚠️ 대본을 입력해주세요.")
+    elif not intro_input and not script_input:
+        st.warning("⚠️ 도입부 또는 본문을 입력해주세요.")
     else:
         with st.spinner("🧠 AI가 대본을 분석하여 씬을 나누는 중..."):
             preview_client = genai.Client(api_key=api_key)
-            st.session_state['split_scenes'] = split_text_automatically(preview_client, script_input, target_chars=scene_duration)
-        st.success(f"✅ 총 {len(st.session_state['split_scenes'])}개 씬으로 분할되었습니다.")
+            all_scenes = []
+
+            # 1. 도입부 분할 (34자 이하, 의미 기준)
+            if intro_input and intro_input.strip():
+                intro_scenes = split_intro_by_meaning(preview_client, intro_input, max_chars=34)
+                all_scenes.extend(intro_scenes)
+                st.info(f"🎬 도입부: {len(intro_scenes)}개 씬 (6초 이하)")
+
+            # 2. 본문 분할 (345자 기준)
+            if script_input and script_input.strip():
+                main_scenes = split_text_automatically(preview_client, script_input, target_chars=scene_duration)
+                all_scenes.extend(main_scenes)
+                st.info(f"📝 본문: {len(main_scenes)}개 씬")
+
+            st.session_state['split_scenes'] = all_scenes
+        st.success(f"✅ 총 {len(st.session_state['split_scenes'])}개 씬으로 분할되었습니다. (도입부 + 본문)")
 
 # [분할된 씬 표시] - 단일 드롭박스 안에 개별 박스로 표시 (이미지 생성 전에만 표시)
 if st.session_state.get('split_scenes') and not st.session_state.get('generated_results'):
@@ -1257,12 +1369,12 @@ if st.session_state.get('split_scenes') and not st.session_state.get('generated_
 
 st.divider()
 
-# [이미지 생성 처리]
+# [이미지 생성 처리] - 도입부 + 본문 통합
 if start_btn:
     if not api_key:
         st.error("⚠️ Google API Key를 입력해주세요.")
-    elif not script_input:
-        st.warning("⚠️ 대본을 입력해주세요.")
+    elif not intro_input and not script_input:
+        st.warning("⚠️ 도입부 또는 본문을 입력해주세요.")
     else:
         # 기존 결과 초기화
         st.session_state['generated_results'] = []
@@ -1285,12 +1397,24 @@ if start_btn:
         progress_bar = st.progress(0)
 
         # -------------------------------------------------------
-        # [핵심] AI가 문맥을 파악하여 씬 분할
+        # [핵심] 도입부 + 본문 분할
         # -------------------------------------------------------
-        status_box.write(f"🧠 AI가 대본 전체 맥락을 읽고 씬을 나누는 중입니다... (기준: 약 {scene_duration}자)")
+        chunks = []
 
-        # [변경점] client 인자 추가
-        chunks = split_text_automatically(client, script_input, target_chars=scene_duration)
+        # 1. 도입부 분할 (34자 이하, 의미 기준)
+        if intro_input and intro_input.strip():
+            status_box.write("🎬 도입부를 의미 단위로 분할하는 중... (6초 이하)")
+            intro_chunks = split_intro_by_meaning(client, intro_input, max_chars=34)
+            chunks.extend(intro_chunks)
+            status_box.write(f"✅ 도입부: {len(intro_chunks)}개 씬")
+
+        # 2. 본문 분할 (345자 기준)
+        if script_input and script_input.strip():
+            status_box.write(f"📝 본문을 분할하는 중... (기준: 약 {scene_duration}자)")
+            main_chunks = split_text_automatically(client, script_input, target_chars=scene_duration)
+            chunks.extend(main_chunks)
+            status_box.write(f"✅ 본문: {len(main_chunks)}개 씬")
+
         total_scenes = len(chunks)
 
         if total_scenes == 0:
@@ -1305,7 +1429,9 @@ if start_btn:
         # [맥락 주입] 영상 제목이 없다면 첫 문장으로 대체
         current_video_title = st.session_state.get('video_title', "").strip()
         if not current_video_title:
-            current_video_title = f"Context: {script_input[:200]}..."
+            # 도입부 또는 본문에서 맥락 추출
+            context_text = intro_input if intro_input else script_input
+            current_video_title = f"Context: {context_text[:200]}..."
 
         # -------------------------------------------------------
         # 2. 프롬프트 생성 (병렬) - 기존 로직 유지
