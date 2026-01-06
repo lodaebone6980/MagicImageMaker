@@ -282,38 +282,35 @@ def parse_numbered_script(script):
     return scenes
 
 # ==========================================
-# [UPGRADE] 함수: AI 기반 대본 맥락 분할 (130~240자 범위, 20~36초)
+# [UPGRADE] 함수: AI 기반 대본 맥락 분할 (170~240자 범위, 28~40초)
 # ==========================================
 def split_text_automatically(client, full_text):
     """
-    Gemini를 이용해 문맥(Context)을 파악하고,
-    시각적 장면 전환이 필요한 지점마다 대본을 분할합니다.
-    - 최소 130자 (20초) 이상이어야 분할
-    - 최대 240자 (36초) 이전에 반드시 분할
-    - 목표: 1만자 기준 약 50~55장
+    본문 전용 분할:
+    - 1만자 기준 50~55개 씬 타겟 (평균 30초/185자)
+    - 최소 170자(28초) 확보 전 분할 엄격 금지
+    - 최대 240자(40초) 이전에 반드시 분할
     """
     prompt = f"""
 [Role] Video Storyboard Director
 
 [Task]
-Split the [Script] into scenes based on MEANING, but strictly follow the DURATION constraints.
+Split the [Main Script] into 50 to 55 scenes for a 10,000-character script.
+(Adjust proportionally if the length differs.)
 
-[Duration Constraints]
-- Target Duration per Scene: 20 - 36 seconds.
-- Character Count per Scene: **130 to 240 characters** (Korean).
-- Goal: Aim for an average of **190 characters** per scene to make approx 50-55 scenes for 10,000 chars.
+[Strict Rules]
+1. **Minimum Length:** DO NOT split if the current segment is under **170 characters**.
+   - Even if the topic changes slightly, keep merging sentences until you reach this limit.
+2. **Target Length:** Aim for **180 - 220 characters** per scene.
+3. **Maximum Limit:** You must split before reaching **240 characters**.
+4. **Meaning:** Split at the end of a sentence only after the minimum length is met.
+5. **Scene Density:** For 10,000 chars, the result must be around 50-55 scenes.
 
-[Splitting Rules]
-1. **Meaning-Based:** Find a natural break (end of a sentence or topic change).
-2. **Minimum Threshold:** DO NOT split if the current scene is under 130 characters. Even if the topic changes, merge it with the next part to meet the 20-second minimum.
-3. **Maximum Threshold:** You MUST split before reaching 240 characters.
-4. **Flow:** Ensure each scene feels like a complete thought or a distinct visual beat.
-
-[Script]
+[Main Script]
 {full_text}
 
-[Output Format]
-Return ONLY a raw JSON list of strings. No explanation.
+[Output]
+Return ONLY a raw JSON list of strings.
 """
 
     try:
@@ -328,15 +325,15 @@ Return ONLY a raw JSON list of strings. No explanation.
         if isinstance(scenes, list):
             return [s.strip() for s in scenes if s.strip()]
         else:
-            return split_script_by_time(full_text, min_chars=130, max_chars=240)
+            return split_script_by_time(full_text, min_chars=170, max_chars=240)
     except Exception as e:
         print(f"AI Split Error: {e}")
-        return split_script_by_time(full_text, min_chars=130, max_chars=240)
+        return split_script_by_time(full_text, min_chars=170, max_chars=240)
 
 
-# [NEW] 규칙 기반 분할 함수 (130~240자 범위, 20~36초)
-def split_script_by_time(script, min_chars=130, max_chars=240):
-    """의미(문장) 단위로 자르되 20~36초 분량(130~240자)을 엄격히 준수"""
+# [UPGRADE] 규칙 기반 분할 함수 (170~240자 범위, 28~40초)
+def split_script_by_time(script, min_chars=170, max_chars=240):
+    """문장 단위로 합치되, 최소 170자가 넘을 때까지 무조건 다음 문장을 붙임"""
     sentences = re.split(r'(?<=[.?!])\s+', script.strip())
     chunks = []
     current_chunk = ""
@@ -345,28 +342,22 @@ def split_script_by_time(script, min_chars=130, max_chars=240):
         if not sentence.strip():
             continue
 
-        # 새로운 문장을 합쳤을 때의 예상 길이
         combined_length = len(current_chunk) + len(sentence) + 1
 
-        # 1. 합쳐도 최대치(240자)를 안 넘으면 일단 합침
+        # 일단 최대치(240자)를 넘지 않으면 계속 합침
         if combined_length <= max_chars:
             current_chunk = (current_chunk + " " + sentence).strip() if current_chunk else sentence
         else:
-            # 2. 합치면 최대치를 넘는 경우
+            # 합치면 240자를 넘는 경우
             if len(current_chunk) >= min_chars:
-                # 이미 최소치(130자)를 넘었다면 여기서 자름
+                # 이미 최소치(170자)를 확보했다면 여기서 자름
                 chunks.append(current_chunk)
                 current_chunk = sentence
             else:
-                # 현재 저장된 게 너무 짧으면(20초 미만) 어쩔 수 없이 합쳐서 자름 (최대치 약간 초과 허용)
-                if current_chunk:
-                    current_chunk = (current_chunk + " " + sentence).strip()
-                    chunks.append(current_chunk)
-                    current_chunk = ""
-                else:
-                    # 문장 하나 자체가 너무 긴 경우
-                    chunks.append(sentence[:max_chars])
-                    current_chunk = sentence[max_chars:]
+                # 현재까지가 너무 짧으면(170자 미만) 어쩔 수 없이 이번 문장까지 합쳐서 자름 (약간 초과 허용)
+                current_chunk = (current_chunk + " " + sentence).strip()
+                chunks.append(current_chunk)
+                current_chunk = ""
 
     if current_chunk:
         chunks.append(current_chunk)
@@ -375,39 +366,41 @@ def split_script_by_time(script, min_chars=130, max_chars=240):
 
 
 # ==========================================
-# [NEW] 도입부 분할 함수 (24~48자, 의미 기준 분할)
+# [UPGRADE] 도입부 분할 함수 (10~13개 씬 타겟, 평균 5.8초)
 # ==========================================
-def split_intro_by_meaning(client, intro_text, min_chars=24, max_chars=48):
+def split_intro_by_meaning(client, intro_text):
     """
-    도입부를 의미 단위로 분할합니다.
-    각 씬은 4~8초(약 24~48자) 범위로 제한됩니다.
+    도입부 전용 분할:
+    - 1분 미만 (< 360자): 10개 씬 타겟
+    - 1분 이상 (≥ 360자): 최대 13개 씬 타겟
+    - 평균 5.8초(약 35자) 기준
     """
     if not intro_text or not intro_text.strip():
         return []
 
+    # 1초당 6자 기준, 1분(60초) = 360자
+    total_len = len(intro_text.strip())
+    # 360자(1분)가 넘으면 13개, 아니면 10개 타겟
+    target_scene_count = 13 if total_len > 360 else 10
+
     prompt = f"""
-[Role] Short-form Video Editor (숏폼 영상 편집자)
+[Role] Short-form Video Editor
 
 [Task]
-아래 [도입부 대본]을 **의미 단위**로 나누어 짧은 씬들로 분할하세요.
-각 씬은 4~8초로 읽을 수 있는 분량이어야 합니다.
+Divide the [Intro Script] into exactly **{target_scene_count} scenes**.
 
-[Rules]
-1. **글자수 범위:** 각 씬은 **{min_chars}자 ~ {max_chars}자** 범위가 이상적입니다.
-2. **의미 단위 분할:** 문장을 억지로 자르지 말고, 의미가 완결되는 지점에서 나누세요.
-3. **짧은 임팩트:** "바로 삼성입니다" 같은 짧은 문장(24자 미만)도 그 자체로 하나의 씬이 됩니다.
-4. **자연스러운 끊김:** 쉼표(,)나 문장 구조를 활용해 자연스럽게 분할하세요.
-5. **너무 길면 분할:** {max_chars}자를 크게 초과하면 의미 단위로 나누세요.
+[Constraints]
+1. **Scene Count:** Generate exactly {target_scene_count} scenes if possible.
+2. **Duration per Scene:** Each scene should be 4-8 seconds long.
+3. **Average Duration:** Aim for an average of **5.8 seconds (approx. 35 characters)** per scene.
+4. **Context:** Split at natural semantic breaks.
+5. **Character Limit:** Each scene must be between 24 and 48 characters.
 
-[예시]
-입력: "한 기업이 삼십년 만에 자동차 시장에 다시 발을 들였습니다. 바로 삼성입니다."
-출력: ["한 기업이 30년 만에 자동차 시장에 다시 발을 들였습니다", "바로 삼성입니다"]
-
-[도입부 대본]
+[Intro Script]
 {intro_text}
 
 [Output]
-- JSON 배열 형식으로만 출력하세요. 설명 없이 배열만 반환하세요.
+Return ONLY a raw JSON list of strings.
 """
 
     try:
@@ -422,38 +415,30 @@ def split_intro_by_meaning(client, intro_text, min_chars=24, max_chars=48):
         if isinstance(scenes, list):
             return [s.strip() for s in scenes if s.strip()]
         else:
-            return split_intro_fallback(intro_text, max_chars)
+            return split_intro_fallback(intro_text, target_scene_count)
     except Exception as e:
         print(f"Intro Split Error: {e}")
-        return split_intro_fallback(intro_text, max_chars)
+        return split_intro_fallback(intro_text, target_scene_count)
 
 
-def split_intro_fallback(intro_text, max_chars=48):
-    """도입부 분할 폴백: 문장 부호 기준으로 분할 (4~8초 기준)"""
-    # 마침표, 쉼표, 물음표, 느낌표 기준으로 분할
-    parts = re.split(r'(?<=[.,?!])\s*', intro_text.strip())
+def split_intro_fallback(intro_text, target_count=10):
+    """도입부 폴백: 목표 개수에 맞춰 균등 분할"""
+    text = intro_text.strip()
+    if not text:
+        return []
+
+    avg_len = len(text) // target_count
+    if avg_len < 20:  # 너무 짧으면 개수 줄임
+        target_count = max(3, len(text) // 30)
+        avg_len = len(text) // target_count
+
     chunks = []
-    current = ""
-
-    for part in parts:
-        if not part.strip():
-            continue
-        if len(part) <= max_chars:
-            chunks.append(part.strip())
-        elif len(current) + len(part) + 1 <= max_chars:
-            current = (current + " " + part).strip() if current else part
-        else:
-            if current:
-                chunks.append(current.strip())
-            # 긴 문장은 강제 분할
-            while len(part) > max_chars:
-                chunks.append(part[:max_chars].strip())
-                part = part[max_chars:]
-            current = part
-
-    if current:
-        chunks.append(current.strip())
-
+    for i in range(target_count):
+        start = i * avg_len
+        end = (i + 1) * avg_len if i < target_count - 1 else len(text)
+        chunk = text[start:end].strip()
+        if chunk:
+            chunks.append(chunk)
     return chunks
 
 
@@ -1292,7 +1277,7 @@ st.subheader("📜 대본 입력 (도입부 / 본문 분리)")
 
 # 도입부 입력
 st.markdown("### 🎬 도입부 (인트로)")
-st.caption("도입부는 **4~8초(24~48자)** 단위로 의미 기준 분할됩니다. 짧고 임팩트 있는 문장들로 구성하세요.")
+st.caption("도입부는 **10~13개 씬** (평균 5.8초/35자)으로 분할됩니다. 1분 이상 시 최대 13개.")
 intro_input = st.text_area(
     "도입부 대본",
     height=120,
@@ -1310,11 +1295,12 @@ with col_input_opt:
     st.info("⏱️ 본문 씬 분할 설정 (고정)")
     st.markdown("""
     **자동 분할 기준:**
-    - 최소: **130자** (20초)
-    - 최대: **240자** (36초)
-    - 평균: **190자** (약 30초)
+    - 최소: **170자** (28초)
+    - 최대: **240자** (40초)
+    - 평균: **200자** (약 33초)
     """)
     st.caption("📊 1만자 기준 약 50~55장 생성")
+    st.caption("🎯 목표: 도입부 10~13장 + 본문 50~55장 = 총 60~65장")
 
 with col_input_txt:
     script_input = st.text_area(
@@ -1356,17 +1342,17 @@ if split_btn:
             preview_client = genai.Client(api_key=api_key)
             all_scenes = []
 
-            # 1. 도입부 분할 (24~48자, 의미 기준)
+            # 1. 도입부 분할 (10~13개 씬 타겟)
             if intro_input and intro_input.strip():
                 intro_scenes = split_intro_by_meaning(preview_client, intro_input)
                 all_scenes.extend(intro_scenes)
-                st.info(f"🎬 도입부: {len(intro_scenes)}개 씬 (4~8초)")
+                st.info(f"🎬 도입부: {len(intro_scenes)}개 씬 (평균 5.8초)")
 
-            # 2. 본문 분할 (130~240자 범위, 20~36초)
+            # 2. 본문 분할 (170~240자 범위, 50~55개 타겟)
             if script_input and script_input.strip():
                 main_scenes = split_text_automatically(preview_client, script_input)
                 all_scenes.extend(main_scenes)
-                st.info(f"📝 본문: {len(main_scenes)}개 씬")
+                st.info(f"📝 본문: {len(main_scenes)}개 씬 (평균 30초)")
 
             st.session_state['split_scenes'] = all_scenes
         st.success(f"✅ 총 {len(st.session_state['split_scenes'])}개 씬으로 분할되었습니다. (도입부 + 본문)")
@@ -1416,19 +1402,19 @@ if start_btn:
         # -------------------------------------------------------
         chunks = []
 
-        # 1. 도입부 분할 (24~48자, 의미 기준)
+        # 1. 도입부 분할 (10~13개 씬 타겟, 평균 5.8초)
         if intro_input and intro_input.strip():
-            status_box.write("🎬 도입부를 의미 단위로 분할하는 중... (4~8초)")
+            status_box.write("🎬 도입부를 분할하는 중... (10~13개 씬 타겟)")
             intro_chunks = split_intro_by_meaning(client, intro_input)
             chunks.extend(intro_chunks)
-            status_box.write(f"✅ 도입부: {len(intro_chunks)}개 씬")
+            status_box.write(f"✅ 도입부: {len(intro_chunks)}개 씬 (평균 5.8초)")
 
-        # 2. 본문 분할 (130~240자 범위, 20~36초)
+        # 2. 본문 분할 (170~240자 범위, 50~55개 타겟)
         if script_input and script_input.strip():
-            status_box.write("📝 본문을 분할하는 중... (130~240자, 20~36초)")
+            status_box.write("📝 본문을 분할하는 중... (170~240자, 50~55개 타겟)")
             main_chunks = split_text_automatically(client, script_input)
             chunks.extend(main_chunks)
-            status_box.write(f"✅ 본문: {len(main_chunks)}개 씬")
+            status_box.write(f"✅ 본문: {len(main_chunks)}개 씬 (평균 30초)")
 
         total_scenes = len(chunks)
 
