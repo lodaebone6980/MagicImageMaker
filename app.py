@@ -284,7 +284,7 @@ def parse_numbered_script(script):
 # ==========================================
 # [UPGRADE] 함수: AI 기반 대본 맥락 분할 (글자수 제한 엄격화)
 # ==========================================
-def split_text_automatically(client, full_text, target_chars=345):
+def split_text_automatically(client, full_text, target_chars=370):
     """
     Gemini를 이용해 문맥(Context)을 파악하고,
     시각적 장면 전환이 필요한 지점마다 대본을 분할합니다.
@@ -321,9 +321,9 @@ def split_text_automatically(client, full_text, target_chars=345):
         return split_script_by_time(full_text, chars_per_chunk=target_chars)
 
 
-# [NEW] 규칙 기반 분할 함수 (345자 기준 엄격 분할)
-def split_script_by_time(script, chars_per_chunk=345):
-    """345자 기준 엄격 분할: 마지막 남은 글자도 무조건 별도 씬으로 분할"""
+# [NEW] 규칙 기반 분할 함수 (370자 기준 엄격 분할)
+def split_script_by_time(script, chars_per_chunk=370):
+    """370자 기준 엄격 분할: 마지막 남은 글자도 무조건 별도 씬으로 분할"""
     sentences = re.split(r'(?<=[.?!])\s+', script.strip())
     chunks = []
     current_chunk = ""
@@ -359,12 +359,12 @@ def split_script_by_time(script, chars_per_chunk=345):
 
 
 # ==========================================
-# [NEW] 도입부 분할 함수 (34자 이하, 의미 기준 분할)
+# [NEW] 도입부 분할 함수 (24~48자, 의미 기준 분할)
 # ==========================================
-def split_intro_by_meaning(client, intro_text, max_chars=34):
+def split_intro_by_meaning(client, intro_text, min_chars=24, max_chars=48):
     """
     도입부를 의미 단위로 분할합니다.
-    각 씬은 6초 이하(약 34자)로 제한됩니다.
+    각 씬은 4~8초(약 24~48자) 범위로 제한됩니다.
     """
     if not intro_text or not intro_text.strip():
         return []
@@ -374,13 +374,14 @@ def split_intro_by_meaning(client, intro_text, max_chars=34):
 
 [Task]
 아래 [도입부 대본]을 **의미 단위**로 나누어 짧은 씬들로 분할하세요.
-각 씬은 6초 이하로 읽을 수 있는 분량이어야 합니다.
+각 씬은 4~8초로 읽을 수 있는 분량이어야 합니다.
 
 [Rules]
-1. **글자수 제한:** 각 씬은 반드시 **{max_chars}자 이하**여야 합니다.
+1. **글자수 범위:** 각 씬은 **{min_chars}자 ~ {max_chars}자** 범위가 이상적입니다.
 2. **의미 단위 분할:** 문장을 억지로 자르지 말고, 의미가 완결되는 지점에서 나누세요.
-3. **짧은 임팩트:** "바로 삼성입니다" 같은 짧은 문장은 그 자체로 하나의 씬이 됩니다.
+3. **짧은 임팩트:** "바로 삼성입니다" 같은 짧은 문장(24자 미만)도 그 자체로 하나의 씬이 됩니다.
 4. **자연스러운 끊김:** 쉼표(,)나 문장 구조를 활용해 자연스럽게 분할하세요.
+5. **너무 길면 분할:** {max_chars}자를 크게 초과하면 의미 단위로 나누세요.
 
 [예시]
 입력: "한 기업이 삼십년 만에 자동차 시장에 다시 발을 들였습니다. 바로 삼성입니다."
@@ -411,8 +412,8 @@ def split_intro_by_meaning(client, intro_text, max_chars=34):
         return split_intro_fallback(intro_text, max_chars)
 
 
-def split_intro_fallback(intro_text, max_chars=34):
-    """도입부 분할 폴백: 문장 부호 기준으로 분할"""
+def split_intro_fallback(intro_text, max_chars=48):
+    """도입부 분할 폴백: 문장 부호 기준으로 분할 (4~8초 기준)"""
     # 마침표, 쉼표, 물음표, 느낌표 기준으로 분할
     parts = re.split(r'(?<=[.,?!])\s*', intro_text.strip())
     chunks = []
@@ -1275,7 +1276,7 @@ st.subheader("📜 대본 입력 (도입부 / 본문 분리)")
 
 # 도입부 입력
 st.markdown("### 🎬 도입부 (인트로)")
-st.caption("도입부는 **6초 이하(34자)** 단위로 의미 기준 분할됩니다. 짧고 임팩트 있는 문장들로 구성하세요.")
+st.caption("도입부는 **4~8초(24~48자)** 단위로 의미 기준 분할됩니다. 짧고 임팩트 있는 문장들로 구성하세요.")
 intro_input = st.text_area(
     "도입부 대본",
     height=120,
@@ -1295,7 +1296,7 @@ with col_input_opt:
         "한 씬당 목표 글자수",
         min_value=100,
         max_value=500,
-        value=345,
+        value=370,
         step=10,
         help="본문의 각 씬은 이 글자수 이하로 분할됩니다."
     )
@@ -1341,13 +1342,13 @@ if split_btn:
             preview_client = genai.Client(api_key=api_key)
             all_scenes = []
 
-            # 1. 도입부 분할 (34자 이하, 의미 기준)
+            # 1. 도입부 분할 (24~48자, 의미 기준)
             if intro_input and intro_input.strip():
-                intro_scenes = split_intro_by_meaning(preview_client, intro_input, max_chars=34)
+                intro_scenes = split_intro_by_meaning(preview_client, intro_input)
                 all_scenes.extend(intro_scenes)
-                st.info(f"🎬 도입부: {len(intro_scenes)}개 씬 (6초 이하)")
+                st.info(f"🎬 도입부: {len(intro_scenes)}개 씬 (4~8초)")
 
-            # 2. 본문 분할 (345자 기준)
+            # 2. 본문 분할 (370자 기준)
             if script_input and script_input.strip():
                 main_scenes = split_text_automatically(preview_client, script_input, target_chars=scene_duration)
                 all_scenes.extend(main_scenes)
@@ -1401,14 +1402,14 @@ if start_btn:
         # -------------------------------------------------------
         chunks = []
 
-        # 1. 도입부 분할 (34자 이하, 의미 기준)
+        # 1. 도입부 분할 (24~48자, 의미 기준)
         if intro_input and intro_input.strip():
-            status_box.write("🎬 도입부를 의미 단위로 분할하는 중... (6초 이하)")
-            intro_chunks = split_intro_by_meaning(client, intro_input, max_chars=34)
+            status_box.write("🎬 도입부를 의미 단위로 분할하는 중... (4~8초)")
+            intro_chunks = split_intro_by_meaning(client, intro_input)
             chunks.extend(intro_chunks)
             status_box.write(f"✅ 도입부: {len(intro_chunks)}개 씬")
 
-        # 2. 본문 분할 (345자 기준)
+        # 2. 본문 분할 (370자 기준)
         if script_input and script_input.strip():
             status_box.write(f"📝 본문을 분할하는 중... (기준: 약 {scene_duration}자)")
             main_chunks = split_text_automatically(client, script_input, target_chars=scene_duration)
